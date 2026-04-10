@@ -33,12 +33,21 @@ const AnimatedNumber = ({ value }) => {
 };
 
 export default function App() {
-  // --- ESTADOS DE SEGURIDAD (MÁQUINA DE VENTAS) ---
-  const [accesoConcedido, setAccesoConcedido] = useState(false);
-  const [claveIngresada, setClaveIngresada] = useState("");
-  const [errorClave, setErrorClave] = useState(false);
+  // --- ESTADOS DE AUTENTICACIÓN ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [loginError, setLoginError] = useState("");
 
-  // --- ESTADOS DEL COTIZADOR ---
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (passwordInput === "MVENTAS26") {
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else {
+      setLoginError("Contraseña incorrecta. Intente nuevamente.");
+    }
+  };
+
   const [proyecto, setProyecto] = useState("MUYURINA");
   const [proyectoPersonalizado, setProyectoPersonalizado] = useState("");
   
@@ -74,6 +83,7 @@ export default function App() {
   const [showComparativa, setShowComparativa] = useState(false);
   const [showTablaPagos, setShowTablaPagos] = useState(false);
 
+  // Inyectar fuentes
   useEffect(() => {
     const link = document.createElement('link');
     link.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap';
@@ -116,24 +126,13 @@ export default function App() {
       if (proyecto === "MUYURINA" || proyecto === "SANTA FE") {
         if (pct >= 4.99) setDescuentoCredito(23); else setDescuentoCredito(20);
       } else if (["LOS JARDINES", "CAÑAVERAL", "EL RENACER"].includes(proyecto)) {
-        // Regla: Mayor a 3% aplica $2/m2
-        if (pct > 3) setDescuentoM2(2); else setDescuentoM2(1);
+        if (pct >= 2.99) setDescuentoM2(2); else setDescuentoM2(1);
       }
     }
   }, [modoInicial, inicialPorcentaje, inicialMonto, superficie, precio, proyecto, descuentoM2, descuentoCredito, aplicarDescM2, aplicarDescCreditoPct]);
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
-  };
-
-  const verificarClave = (e) => {
-    e.preventDefault();
-    if (claveIngresada === "MAQUINA2026") { 
-      setAccesoConcedido(true);
-      setErrorClave(false);
-    } else {
-      setErrorClave(true);
-    }
   };
 
   const calcular = (e) => {
@@ -269,50 +268,20 @@ export default function App() {
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
-  // Se habilita porcentaje para todos para aplicar reglas sin restricción a crédito en los proyectos clave
-  const showDescPorcentaje = true; 
+  const showDescPorcentaje = ["MUYURINA", "SANTA FE", "OTRO"].includes(proyecto);
   const showDescM2 = ["EL RENACER", "LOS JARDINES", "CAÑAVERAL", "OTRO"].includes(proyecto);
+  const showBonoInicial = ["OTRO"].includes(proyecto);
   const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER"].includes(proyecto);
 
-  // --- PANTALLA DE ACCESO PROTEGIDO ---
-  if (!accesoConcedido) {
-    return (
-      <div className="min-h-screen bg-[#0B1121] flex flex-col items-center justify-center p-6 font-['Plus_Jakarta_Sans'] relative overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-cyan-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[35rem] h-[35rem] bg-blue-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
-        
-        <div className="bg-[#0F172A]/80 backdrop-blur-xl p-10 rounded-[2.5rem] border border-cyan-900/50 shadow-[0_0_40px_rgba(6,182,212,0.15)] max-w-sm w-full text-center relative z-10">
-          <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(6,182,212,0.4)]">
-            <Lock className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Acceso VIP</h2>
-          <p className="text-cyan-200/60 text-xs uppercase tracking-widest font-bold mb-8">Uso exclusivo MÁQUINA DE VENTAS</p>
-          
-          <form onSubmit={verificarClave} className="space-y-5">
-            <div>
-              <input 
-                type="password" 
-                placeholder="CONTRASEÑA" 
-                value={claveIngresada}
-                onChange={(e) => setClaveIngresada(e.target.value.toUpperCase())}
-                className="w-full bg-[#1E293B]/60 border border-slate-700/80 rounded-2xl p-4 text-center text-white font-black tracking-[0.3em] placeholder:text-slate-600 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(34,211,238,0.2)] focus:outline-none transition-all"
-              />
-            </div>
-            {errorClave && <p className="text-red-400 text-[10px] font-extrabold uppercase tracking-widest animate-pulse">Clave incorrecta</p>}
-            
-            <button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-white font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2"
-            >
-              INGRESAR <ChevronRight className="w-5 h-5" />
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+  const projectImages = {
+    "MUYURINA": "/image_9f6ffd.jpg", // Foto aérea principal
+    "SANTA FE": "/06 (1).jpg",      // Parque lineal 
+    "EL RENACER": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=80",
+    "LOS JARDINES": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1000&q=80",
+    "CAÑAVERAL": "https://images.unsplash.com/photo-1530836369250-ef71a3f5e4bf?auto=format&fit=crop&w=1000&q=80",
+    "OTRO": "/image_9f6ffd.jpg"
+  };
 
-  // --- COTIZADOR PRINCIPAL ---
   return (
     <div className="min-h-screen bg-[#0B1121] relative font-['Plus_Jakarta_Sans'] text-slate-300 overflow-x-hidden selection:bg-cyan-500/30 selection:text-cyan-100">
       
@@ -364,6 +333,46 @@ export default function App() {
         <div className="absolute bottom-[10%] right-[-5%] w-[35rem] h-[35rem] bg-emerald-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
       </div>
 
+      {!isAuthenticated ? (
+        <div className="flex flex-col items-center justify-center min-h-screen relative z-20 px-4 bg-[#0B1121]/95 backdrop-blur-xl">
+          <div className="bg-[#121A2F] border border-slate-700/30 rounded-[2.5rem] p-10 sm:p-14 max-w-[420px] w-full relative overflow-hidden text-center shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
+            
+            {/* Glow de fondo dentro de la tarjeta */}
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-500/10 rounded-full blur-[50px] pointer-events-none"></div>
+
+            {/* Icono Candado Premium */}
+            <div className="w-[4.5rem] h-[4.5rem] mx-auto bg-gradient-to-b from-[#38bdf8] to-[#2563eb] rounded-[1.25rem] flex items-center justify-center mb-6 shadow-[0_10px_30px_rgba(56,189,248,0.4)]">
+              <Lock className="w-8 h-8 text-white" strokeWidth={2} />
+            </div>
+
+            {/* Textos */}
+            <h1 className="text-3xl sm:text-[2rem] font-extrabold text-white tracking-tight mb-2 drop-shadow-md">Acceso VIP</h1>
+            <p className="text-slate-400/80 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] mb-10 leading-relaxed">
+              Uso Exclusivo Máquina de<br/>Ventas
+            </p>
+            
+            {/* Formulario */}
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <input 
+                  type="password" 
+                  value={passwordInput} 
+                  onChange={(e) => setPasswordInput(e.target.value)} 
+                  placeholder="CONTRASEÑA" 
+                  className="w-full bg-[#0B1120] border border-slate-700/50 rounded-2xl p-4 text-center text-sm tracking-[0.2em] font-bold text-white placeholder:text-slate-600 focus:border-[#38bdf8] focus:ring-1 focus:ring-[#38bdf8] transition-all outline-none shadow-inner" 
+                />
+                {loginError && <p className="text-rose-400 text-xs font-bold mt-3 animate-pulse">{loginError}</p>}
+              </div>
+              <button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-[#38bdf8] to-[#2563eb] hover:from-[#0ea5e9] hover:to-[#1d4ed8] text-white font-extrabold py-4 px-6 rounded-2xl transition-all duration-300 shadow-[0_10px_25px_rgba(56,189,248,0.4)] hover:shadow-[0_15px_35px_rgba(56,189,248,0.6)] hover:-translate-y-1 uppercase tracking-widest text-sm flex items-center justify-center gap-2 group"
+              >
+                INGRESAR <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : (
       <div className="max-w-[1200px] mx-auto py-10 px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* CABECERA CORPORATIVA DARK */}
@@ -404,7 +413,7 @@ export default function App() {
                 <div className="space-y-4 bg-[#1E293B]/30 p-5 rounded-2xl border border-cyan-900/30">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <UserCircle className="w-3.5 h-3.5 text-cyan-500" /> Nombre del Cliente (Para el PDF)
+                      <UserCircle className="w-3.5 h-3.5 text-cyan-500" /> Nombre del Cliente (Opcional)
                     </label>
                     <input type="text" value={nombreCliente} onChange={e => setNombreCliente(e.target.value)} placeholder="Ej. Juan Pérez" className="w-full glass-input rounded-xl p-3 text-sm" />
                   </div>
@@ -429,6 +438,19 @@ export default function App() {
                     <option value="CAÑAVERAL">CAÑAVERAL</option>
                     <option value="OTRO">OTRO...</option>
                   </select>
+                  {/* Casilla condicional para el nombre del proyecto si se elige OTRO */}
+                  {proyecto === "OTRO" && (
+                    <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                      <input 
+                        type="text" 
+                        value={proyectoPersonalizado} 
+                        onChange={e => setProyectoPersonalizado(e.target.value)} 
+                        placeholder="Nombre del nuevo proyecto..." 
+                        className="w-full glass-input rounded-2xl p-4 text-sm font-bold text-white shadow-inner"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* UV / MZN / LOTE */}
@@ -643,11 +665,11 @@ export default function App() {
                     
                     <div className="grid grid-cols-2 gap-3">
                       {!escenarioA ? (
-                         <button onClick={()=>{setEscenarioA(resultado); setShowComparativa(true);}} className="bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><Scale className="w-4 h-4"/> Guardar Escenario A</button>
+                         <button onClick={()=>{setEscenarioA(resultado); setShowComparativa(true);}} className="col-span-2 bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><Scale className="w-4 h-4"/> Guardar Escenario A</button>
                       ) : (
-                         <button onClick={()=>setShowComparativa(true)} className="bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-400 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><Scale className="w-4 h-4"/> Comparar (A) vs (B)</button>
+                         <button onClick={()=>setShowComparativa(true)} className="col-span-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-400 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><Scale className="w-4 h-4"/> Comparar (A) vs (B)</button>
                       )}
-                      <button onClick={()=>setShowTablaPagos(!showTablaPagos)} className="bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><TableProperties className="w-4 h-4"/> Plan de Pagos</button>
+                      <button onClick={()=>setShowTablaPagos(!showTablaPagos)} className="col-span-2 bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><TableProperties className="w-4 h-4"/> Plan de Pagos</button>
                     </div>
                   </div>
 
@@ -686,7 +708,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
-
