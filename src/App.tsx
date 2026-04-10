@@ -236,12 +236,20 @@ export default function App() {
     }, 100);
   };
 
+  // --- MENSAJE STORYTELLING KILLER ---
   const generarMensajePropuesta = () => {
     if (!resultado) return "";
-    const saludo = `Estimado(a) ${resultado.cliente}, un gusto saludarle. Soy ${resultado.asesor || 'su Asesor Comercial'}, presento la propuesta de inversión:\n\n`;
+    
+    const saludo = `Estimado(a) *${resultado.cliente}*, un gusto saludarle. Soy ${resultado.asesor || 'su Asesor Comercial'}.\n\n`;
+    
+    const storytelling = `🌱 _"Las cosas grandes, comienzan con un inicio pequeño"_.\nEsta frase de nuestro fundador, Rafael Paz, define exactamente lo que representa este paso: un terreno es el inicio seguro para el gran sueño de su familia.\n\n` +
+      `🏆 Al invertir con *CELINA*, usted cuenta con el respaldo absoluto del *GRUPO PAZ*, reconocido este 2026 como una de las *5 Mejores Empresas para Trabajar en toda Bolivia*. Le garantizamos la mayor seguridad, legalidad y plusvalía del país para su inversión.\n\n` +
+      `Me enorgullece presentarle su propuesta oficial:\n\n`;
+
     const nombreProyectoCapitalizado = resultado.proyecto.charAt(0).toUpperCase() + resultado.proyecto.slice(1).toLowerCase();
-    const ubicacion = `📍 *Proyecto ${nombreProyectoCapitalizado || 'S/N'}*\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
-    const precioLista = `💎 *Precio:* $ ${resultado.valorOriginal} (Bs. ${resultado.valorOriginalBs})\n\n`;
+    const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}*\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
+    
+    const precioLista = `💎 *Precio de Lista Original:* $ ${resultado.valorOriginal} (Bs. ${resultado.valorOriginalBs})\n\n`;
     
     let arrContado = [];
     if (resultado.porcentajeContado > 0) arrContado.push(`${resultado.porcentajeContado}%`);
@@ -251,7 +259,7 @@ export default function App() {
 
     let contadoStr = "";
     if (arrContado.length > 0) {
-        contadoStr = `💰 *Contado - ¡Con ${arrContado.join(' + ')} de descuento!*\n*Inversión:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
+        contadoStr = `💰 *Opción 1: Al Contado - ¡Con ${arrContado.join(' + ')} de descuento!*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
     }
 
     let arrCredito = [];
@@ -259,15 +267,16 @@ export default function App() {
     if (resultado.descuentoM2 > 0) arrCredito.push(`$${resultado.descuentoM2}/m²`);
     let creditoStr = "";
     if (arrCredito.length > 0) {
-        creditoStr = `✅ *Crédito - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Inversión:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
+        creditoStr = `✅ *Opción 2: A Crédito - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
     }
 
     const financiamiento = `📊 *Plan de Financiamiento* (${resultado.plazo} años)\n` +
       `*Cuota inicial (${resultado.pctInicial}%):* $${formatMoney(resultado.inicialRaw)} (Bs. ${resultado.inicialBs})\n` +
-      `*Cuota mensual:* $${formatMoney(resultado.mensualRaw)} (Bs. ${formatMoney(resultado.mensualBsRaw)})\n\n`;
+      `*Cuota mensual fija:* $${formatMoney(resultado.mensualRaw)} (Bs. ${formatMoney(resultado.mensualBsRaw)})\n\n`;
 
-    const cierre = `¿Le gustaría agendar una visita al terreno o prefiere una breve llamada para coordinar el cierre? Quedo a su disposición. 🤝`;
-    return saludo + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
+    const cierre = `¿Le gustaría agendar una visita al terreno para dar ese "pequeño inicio" hacia su gran proyecto? Quedo a su entera disposición. 🤝`;
+    
+    return saludo + storytelling + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
   };
 
   const enviarWhatsApp = () => {
@@ -435,7 +444,6 @@ export default function App() {
                 <h2 className="text-lg font-bold tracking-wide text-white">Datos de Inversión</h2>
               </div>
               
-              {/* BOTÓN NUEVA COTIZACIÓN */}
               <button 
                 type="button" 
                 onClick={handleReset} 
@@ -589,7 +597,6 @@ export default function App() {
             ) : (
               <div className="glass-panel-right rounded-[2.5rem] p-7 sm:p-10 relative overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700">
                 
-                {/* Línea superior verde */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500/50 to-transparent"></div>
 
                 {/* CABECERA RESULTADOS */}
