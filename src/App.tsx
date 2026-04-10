@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check } from "lucide-react";
 
 // --- COMPONENTE DE ANIMACIÓN DE NÚMEROS ---
 const AnimatedNumber = ({ value }) => {
@@ -82,6 +82,9 @@ export default function App() {
   const [escenarioA, setEscenarioA] = useState(null);
   const [showComparativa, setShowComparativa] = useState(false);
   const [showTablaPagos, setShowTablaPagos] = useState(false);
+  
+  const resultsRef = useRef(null);
+  const [isCopied, setIsCopied] = useState(false);
 
   // Inyectar fuentes
   useEffect(() => {
@@ -227,14 +230,14 @@ export default function App() {
       mensual: formatMoney(cuota_final), mensualBs: formatMoney(cuota_final * TIPO_CAMBIO),
       tablaPlazos: tablaPlazos
     });
+
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
-  useEffect(() => {
-    calcular();
-  }, [modoInicial, aplicarBonoInicialOtro, aplicarDescContadoPct, aplicarDescCreditoPct, aplicarDescM2, aplicarDescContadoM2, superficie, precio, inicialPorcentaje, inicialMonto, años, descuentoContado, descuentoCredito, descuentoM2, descuentoInicial, descuentoContadoM2, nombreCliente, nombreAsesor]);
-
-  const enviarWhatsApp = () => {
-    if (!resultado) return;
+  const generarMensajePropuesta = () => {
+    if (!resultado) return "";
     const saludo = `Estimado(a) ${resultado.cliente}, un gusto saludarle. Soy ${resultado.asesor || 'su Asesor Comercial'}, presento la propuesta de inversión:\n\n`;
     const nombreProyectoCapitalizado = resultado.proyecto.charAt(0).toUpperCase() + resultado.proyecto.slice(1).toLowerCase();
     const ubicacion = `📍 *Proyecto ${nombreProyectoCapitalizado || 'S/N'}*\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
@@ -264,8 +267,42 @@ export default function App() {
       `*Cuota mensual:* $${formatMoney(resultado.mensualRaw)} (Bs. ${formatMoney(resultado.mensualBsRaw)})\n\n`;
 
     const cierre = `¿Le gustaría agendar una visita al terreno o prefiere una breve llamada para coordinar el cierre? Quedo a su disposición. 🤝`;
-    const mensaje = saludo + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
+    return saludo + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
+  };
+
+  const enviarWhatsApp = () => {
+    const mensaje = generarMensajePropuesta();
+    if (!mensaje) return;
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+  };
+
+  const copiarTexto = () => {
+    const mensaje = generarMensajePropuesta();
+    if (!mensaje) return;
+
+    const textArea = document.createElement("textarea");
+    textArea.value = mensaje;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('No se pudo copiar', err);
+    }
+    document.body.removeChild(textArea);
+  };
+
+  const handleReset = () => {
+    setResultado(null);
+    setEscenarioA(null);
+    setShowComparativa(false);
+    setShowTablaPagos(false);
+    setUv(""); setMzn(""); setLote(""); setSuperficie(""); setPrecio("");
+    setAños(""); setInicialMonto(""); setInicialPorcentaje("");
+    setNombreCliente("");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const showDescPorcentaje = ["MUYURINA", "SANTA FE", "OTRO"].includes(proyecto);
@@ -274,8 +311,8 @@ export default function App() {
   const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER"].includes(proyecto);
 
   const projectImages = {
-    "MUYURINA": "/image_9f6ffd.jpg", // Foto aérea principal
-    "SANTA FE": "/06 (1).jpg",      // Parque lineal 
+    "MUYURINA": "/image_9f6ffd.jpg", 
+    "SANTA FE": "/06 (1).jpg",      
     "EL RENACER": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=80",
     "LOS JARDINES": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1000&q=80",
     "CAÑAVERAL": "https://images.unsplash.com/photo-1530836369250-ef71a3f5e4bf?auto=format&fit=crop&w=1000&q=80",
@@ -286,13 +323,11 @@ export default function App() {
     <div className="min-h-screen bg-[#0B1121] relative font-['Plus_Jakarta_Sans'] text-slate-300 overflow-x-hidden selection:bg-cyan-500/30 selection:text-cyan-100">
       
       <style>{`
-        /* CUSTOM SCROLLBAR PARA MODO OSCURO */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B1121; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
         
-        /* ANIMACIONES Y GLOWS */
         .glass-panel-left {
           background: rgba(15, 23, 42, 0.6);
           backdrop-filter: blur(24px);
@@ -322,13 +357,10 @@ export default function App() {
         .glass-input::placeholder { color: #475569; }
       `}</style>
 
-      {/* FONDO GLOBAL OSCURO CON LA IMAGEN AÉREA (Difuminado) */}
+      {/* FONDO GLOBAL OSCURO CON LA IMAGEN AÉREA */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <img src="/image_9f6ffd.jpg" className="absolute inset-0 w-full h-full object-cover opacity-[0.15] filter blur-[6px] scale-105" alt="Background" />
-        {/* Overlay degradado para oscurecer la imagen y darle profundidad */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1121]/80 via-[#0B1121]/90 to-[#0B1121]"></div>
-        
-        {/* Resplandores abstractos en el fondo */}
         <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-cyan-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-[35rem] h-[35rem] bg-emerald-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
       </div>
@@ -337,21 +369,17 @@ export default function App() {
         <div className="flex flex-col items-center justify-center min-h-screen relative z-20 px-4 bg-[#0B1121]/95 backdrop-blur-xl">
           <div className="bg-[#121A2F] border border-slate-700/30 rounded-[2.5rem] p-10 sm:p-14 max-w-[420px] w-full relative overflow-hidden text-center shadow-[0_30px_60px_rgba(0,0,0,0.6)]">
             
-            {/* Glow de fondo dentro de la tarjeta */}
             <div className="absolute top-10 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-500/10 rounded-full blur-[50px] pointer-events-none"></div>
 
-            {/* Icono Candado Premium */}
             <div className="w-[4.5rem] h-[4.5rem] mx-auto bg-gradient-to-b from-[#38bdf8] to-[#2563eb] rounded-[1.25rem] flex items-center justify-center mb-6 shadow-[0_10px_30px_rgba(56,189,248,0.4)]">
               <Lock className="w-8 h-8 text-white" strokeWidth={2} />
             </div>
 
-            {/* Textos */}
             <h1 className="text-3xl sm:text-[2rem] font-extrabold text-white tracking-tight mb-2 drop-shadow-md">Acceso VIP</h1>
             <p className="text-slate-400/80 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] mb-10 leading-relaxed">
               Uso Exclusivo Máquina de<br/>Ventas
             </p>
             
-            {/* Formulario */}
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
                 <input 
@@ -399,11 +427,23 @@ export default function App() {
           <div className="lg:col-span-5 glass-panel-left rounded-[2.5rem] overflow-hidden transition-all duration-500 relative">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500/50 to-transparent"></div>
             
-            <div className="p-6 sm:p-8 border-b border-slate-700/50 flex items-center gap-3">
-              <div className="bg-[#1E293B] p-2.5 rounded-xl border border-slate-600/50 shadow-inner">
-                <FileText className="w-5 h-5 text-cyan-400" />
+            <div className="p-6 sm:p-8 border-b border-slate-700/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-[#1E293B] p-2.5 rounded-xl border border-slate-600/50 shadow-inner">
+                  <FileText className="w-5 h-5 text-cyan-400" />
+                </div>
+                <h2 className="text-lg font-bold tracking-wide text-white">Datos de Inversión</h2>
               </div>
-              <h2 className="text-lg font-bold tracking-wide text-white">Datos de Inversión</h2>
+              
+              {/* BOTÓN NUEVA COTIZACIÓN */}
+              <button 
+                type="button" 
+                onClick={handleReset} 
+                className="p-2.5 bg-[#0F172A] hover:bg-[#1e293b] rounded-xl border border-slate-700/80 text-slate-400 hover:text-cyan-400 transition-colors shadow-sm group" 
+                title="Limpiar Cotización"
+              >
+                <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+              </button>
             </div>
             
             <div className="p-6 sm:p-8 bg-[#0F172A]/40">
@@ -438,7 +478,6 @@ export default function App() {
                     <option value="CAÑAVERAL">CAÑAVERAL</option>
                     <option value="OTRO">OTRO...</option>
                   </select>
-                  {/* Casilla condicional para el nombre del proyecto si se elige OTRO */}
                   {proyecto === "OTRO" && (
                     <div className="pt-2 animate-in fade-in slide-in-from-top-2">
                       <input 
@@ -540,7 +579,7 @@ export default function App() {
           </div>
 
           {/* --- PANEL DERECHO: RESULTADOS DARK --- */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
+          <div className="lg:col-span-7 flex flex-col gap-6" ref={resultsRef}>
             {!resultado ? (
               <div className="glass-panel-right rounded-[2.5rem] h-full min-h-[600px] flex flex-col items-center justify-center text-slate-500 p-10 text-center relative overflow-hidden">
                 <div className="relative z-10"><div className="bg-[#1E293B] p-8 rounded-full mb-8 shadow-xl border border-slate-700 shadow-emerald-500/5"><Calculator className="w-16 h-16 text-emerald-500 opacity-50" /></div></div>
@@ -661,7 +700,15 @@ export default function App() {
 
                   {/* ACCIONES KILLER DARK */}
                   <div className="flex flex-col gap-3 mt-8">
-                    <button onClick={enviarWhatsApp} className="w-full bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-[#064e3b] font-black py-4 rounded-2xl shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center gap-2 text-sm uppercase tracking-widest transition-all"><Send className="w-5 h-5"/> Enviar por WhatsApp</button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={enviarWhatsApp} className="w-full bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-[#064e3b] font-black py-4 rounded-xl shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center gap-2 text-sm uppercase tracking-widest transition-all">
+                        <Send className="w-5 h-5"/> WhatsApp
+                      </button>
+                      <button onClick={copiarTexto} className="w-full bg-[#1E293B] hover:bg-[#2A374F] border border-cyan-900/50 text-cyan-400 font-bold py-4 rounded-xl shadow-sm flex items-center justify-center gap-2 text-sm uppercase tracking-widest transition-all">
+                        {isCopied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
+                        {isCopied ? "¡Copiado!" : "Copiar Texto"}
+                      </button>
+                    </div>
                     
                     <div className="grid grid-cols-2 gap-3">
                       {!escenarioA ? (
