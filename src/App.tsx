@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check } from "lucide-react";
+import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check, MessageSquareText } from "lucide-react";
 
 // --- COMPONENTE DE ANIMACIÓN DE NÚMEROS ---
 const AnimatedNumber = ({ value }) => {
@@ -236,19 +236,20 @@ export default function App() {
     }, 100);
   };
 
-  // --- MENSAJE STORYTELLING KILLER ---
-  const generarMensajePropuesta = () => {
+  // --- MENSAJES DIVIDIDOS ---
+  
+  const generarMensajeParte1 = () => {
     if (!resultado) return "";
-    
-    const saludo = `Estimado(a) *${resultado.cliente}*, un gusto saludarle. Soy ${resultado.asesor || 'su Asesor Comercial'}.\n\n`;
-    
-    const storytelling = `🌱 _"Las cosas grandes, comienzan con un inicio pequeño"_.\nEsta frase de nuestro fundador, Rafael Paz, define exactamente lo que representa este paso: un terreno es el inicio seguro para el gran sueño de su familia.\n\n` +
-      `🏆 Al invertir con *CELINA*, usted cuenta con el respaldo absoluto del *GRUPO PAZ*, reconocido este 2026 como una de las *5 Mejores Empresas para Trabajar en toda Bolivia*. Le garantizamos la mayor seguridad, legalidad y plusvalía del país para su inversión.\n\n` +
-      `Me enorgullece presentarle su propuesta oficial:\n\n`;
+    return `Estimado(a) *${resultado.cliente}*, un gusto saludarle. Soy ${resultado.asesor || 'su Asesor Comercial'}.\n\n` +
+           `🌱 _"Las cosas grandes, comienzan con un inicio pequeño"_.\nEsta frase de nuestro fundador, Rafael Paz, define exactamente lo que representa este paso: un terreno es el inicio seguro para el gran sueño de su familia.\n\n` +
+           `🏆 Al invertir con *CELINA*, usted cuenta con el respaldo absoluto del *GRUPO PAZ*, reconocido este 2026 como una de las *5 Mejores Empresas para Trabajar en toda Bolivia*. Le garantizamos la mayor seguridad, legalidad y plusvalía del país para su inversión.`;
+  };
 
+  const generarMensajeParte2 = () => {
+    if (!resultado) return "";
+    const inicio = `Me enorgullece presentarle su propuesta oficial:\n\n`;
     const nombreProyectoCapitalizado = resultado.proyecto.charAt(0).toUpperCase() + resultado.proyecto.slice(1).toLowerCase();
     const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}*\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
-    
     const precioLista = `💎 *Precio de Lista Original:* $ ${resultado.valorOriginal} (Bs. ${resultado.valorOriginalBs})\n\n`;
     
     let arrContado = [];
@@ -260,14 +261,19 @@ export default function App() {
     let contadoStr = "";
     if (arrContado.length > 0) {
         contadoStr = `💰 *Opción 1: Al Contado - ¡Con ${arrContado.join(' + ')} de descuento!*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
+    } else {
+        contadoStr = `💰 *Opción 1: Al Contado*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
     }
 
     let arrCredito = [];
     if (resultado.porcentajeCredito > 0) arrCredito.push(`${resultado.porcentajeCredito}%`);
     if (resultado.descuentoM2 > 0) arrCredito.push(`$${resultado.descuentoM2}/m²`);
+    
     let creditoStr = "";
     if (arrCredito.length > 0) {
-        creditoStr = `✅ *Opción 2: A Crédito - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
+        creditoStr = `✅ *Opción 2: A Plazos - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
+    } else {
+        creditoStr = `✅ *Opción 2: A Plazos*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
     }
 
     const financiamiento = `📊 *Plan de Financiamiento* (${resultado.plazo} años)\n` +
@@ -276,17 +282,24 @@ export default function App() {
 
     const cierre = `¿Le gustaría agendar una visita al terreno para dar ese "pequeño inicio" hacia su gran proyecto? Quedo a su entera disposición. 🤝`;
     
-    return saludo + storytelling + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
+    return inicio + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
   };
 
-  const enviarWhatsApp = () => {
-    const mensaje = generarMensajePropuesta();
+  const enviarWhatsAppParte1 = () => {
+    const mensaje = generarMensajeParte1();
     if (!mensaje) return;
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
-  const copiarTexto = () => {
-    const mensaje = generarMensajePropuesta();
+  const enviarWhatsAppParte2 = () => {
+    const mensaje = generarMensajeParte2();
+    if (!mensaje) return;
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+  };
+
+  // Función original de copiar todo junto por si acaso
+  const copiarTextoTodo = () => {
+    const mensaje = generarMensajeParte1() + "\n\n" + generarMensajeParte2();
     if (!mensaje) return;
 
     const textArea = document.createElement("textarea");
@@ -705,26 +718,30 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* ACCIONES KILLER DARK */}
+                  {/* ACCIONES KILLER DARK CON DOS BOTONES PARA WHATSAPP */}
                   <div className="flex flex-col gap-3 mt-8">
                     <div className="grid grid-cols-2 gap-3">
-                      <button onClick={enviarWhatsApp} className="w-full bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-[#064e3b] font-black py-4 rounded-xl shadow-[0_0_20px_rgba(52,211,153,0.3)] flex items-center justify-center gap-2 text-sm uppercase tracking-widest transition-all">
-                        <Send className="w-5 h-5"/> WhatsApp
+                      <button onClick={enviarWhatsAppParte1} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-[0_0_15px_rgba(52,211,153,0.2)] flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest transition-all">
+                        <MessageSquareText className="w-4 h-4"/> 1️⃣ Enviar Intro
                       </button>
-                      <button onClick={copiarTexto} className="w-full bg-[#1E293B] hover:bg-[#2A374F] border border-cyan-900/50 text-cyan-400 font-bold py-4 rounded-xl shadow-sm flex items-center justify-center gap-2 text-sm uppercase tracking-widest transition-all">
-                        {isCopied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
-                        {isCopied ? "¡Copiado!" : "Copiar Texto"}
+                      <button onClick={enviarWhatsAppParte2} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-[0_0_15px_rgba(52,211,153,0.2)] flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest transition-all">
+                        <Send className="w-4 h-4"/> 2️⃣ Enviar Cotización
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <button onClick={copiarTextoTodo} className="col-span-1 bg-[#1E293B] hover:bg-[#2A374F] border border-cyan-900/50 text-cyan-400 font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest transition-all">
+                        {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                        {isCopied ? "Copiado!" : "Copiar Todo"}
+                      </button>
                       {!escenarioA ? (
                          <button onClick={()=>{setEscenarioA(resultado); setShowComparativa(true);}} className="col-span-2 bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><Scale className="w-4 h-4"/> Guardar Escenario A</button>
                       ) : (
                          <button onClick={()=>setShowComparativa(true)} className="col-span-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-400 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><Scale className="w-4 h-4"/> Comparar (A) vs (B)</button>
                       )}
-                      <button onClick={()=>setShowTablaPagos(!showTablaPagos)} className="col-span-2 bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors"><TableProperties className="w-4 h-4"/> Plan de Pagos</button>
                     </div>
+
+                    <button onClick={()=>setShowTablaPagos(!showTablaPagos)} className="w-full bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors mt-1"><TableProperties className="w-4 h-4"/> Ver Plan de Pagos Completo</button>
                   </div>
 
                   {/* TABLA DE PLAN DE PAGOS DARK */}
