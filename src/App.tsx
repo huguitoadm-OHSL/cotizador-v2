@@ -57,8 +57,6 @@ export default function App() {
   useEffect(() => {
     const fetchLotes = async () => {
       try {
-        // En la vista previa (blob:) el fetch arroja TypeError al parsear URLs relativas. 
-        // Lo prevenimos verificando el entorno antes de hacer la petición.
         if (window.location.protocol === 'blob:' || window.location.origin === 'null') {
           throw new Error("ENTORNO_VISTA_PREVIA");
         }
@@ -68,14 +66,56 @@ export default function App() {
         const text = await response.text();
         
         try {
-          const data = JSON.parse(text);
-          setLotesDB(Array.isArray(data) ? data : []);
+          const rawData = JSON.parse(text);
+          const dataArray = Array.isArray(rawData) ? rawData : [];
+          
+          // --- AUTO-SANADOR DE DATOS (Normalizador Inteligente) ---
+          const normalizedData = dataArray.map(item => {
+            const rawKeys = Object.keys(item);
+            
+            // Busca la columna correcta aunque el usuario no le haya puesto el nombre exacto
+            const getValue = (matchWords) => {
+                const foundKey = rawKeys.find(k => {
+                    const cleanKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    return matchWords.some(w => cleanKey.includes(w));
+                });
+                return foundKey ? item[foundKey] : "";
+            };
+
+            // 1. Arreglar el Proyecto (Le quita la palabra CELINA si la tiene en el Excel)
+            let rawProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "");
+            let cleanProyecto = rawProyecto.toUpperCase().replace('CELINA ', '').replace('CELINA', '').trim();
+
+            // 2. Arreglar números con comas (ej. "240,5" se convierte a 240.5)
+            const cleanNumber = (val) => {
+                if (!val) return "";
+                if (typeof val === 'number') return val;
+                const strVal = String(val).replace(',', '.');
+                return Number(strVal) || val;
+            };
+
+            // 3. Arreglar y extraer UV, MZN y LOTE aunque vengan sucios
+            return {
+                proyecto: cleanProyecto,
+                uv: String(getValue(['uv']) || "").toUpperCase().replace('UV:', '').trim(),
+                mzn: String(getValue(['mzn', 'manzano']) || "").toUpperCase().replace('MZN:', '').trim(),
+                lote: String(getValue(['lote']) || "").toUpperCase().replace('LOTE:', '').trim(),
+                superficie: cleanNumber(getValue(['superficie', 'sup'])),
+                precio: cleanNumber(getValue(['precio', 'preciomt2', 'mt2'])) 
+            };
+          });
+
+          // Solo guardamos los lotes que sí tengan proyecto y número de lote válido
+          const validLotes = normalizedData.filter(l => l.proyecto && l.lote);
+
+          setLotesDB(validLotes);
           setDbError(null);
+          console.log("Base de datos cargada y SANADA con éxito. Total:", validLotes.length);
+
         } catch (e) {
           throw new Error("ERROR_JSON");
         }
       } catch (error) {
-        // Asignar el mensaje de error para la interfaz sin arrojar logs alarmantes en la consola
         if (error instanceof Error) {
           if (error.message === "ERROR_404") {
             setDbError("❌ Falta el archivo lotes.json en la carpeta 'public' de GitHub.");
