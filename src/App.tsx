@@ -69,31 +69,46 @@ export default function App() {
           const rawData = JSON.parse(text);
           const dataArray = Array.isArray(rawData) ? rawData : [];
           
-          // --- AUTO-SANADOR DE DATOS (Normalizador Inteligente) ---
+          // --- AUTO-SANADOR DE DATOS (Escáner de Puntuación Inteligente) ---
           const normalizedData = dataArray.map(item => {
             const rawKeys = Object.keys(item);
             
-            const getValue = (matchWords) => {
-                const foundKey = rawKeys.find(k => {
+            const getValue = (matchWords, avoidWords = []) => {
+                let bestKey = null;
+                let bestScore = -1;
+
+                rawKeys.forEach(k => {
                     const cleanKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return matchWords.some(w => cleanKey.includes(w));
+                    let score = 0;
+                    
+                    matchWords.forEach(w => {
+                        if (cleanKey.includes(w)) score += 10;
+                    });
+
+                    avoidWords.forEach(w => {
+                        if (cleanKey.includes(w)) score -= 20; // Huye de estas palabras
+                    });
+
+                    if (score > bestScore && score > 0) {
+                        bestScore = score;
+                        bestKey = k;
+                    }
                 });
-                return foundKey ? item[foundKey] : "";
+                return bestKey ? item[bestKey] : "";
             };
 
             let rawProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "");
             let cleanProyecto = rawProyecto.toUpperCase().replace('CELINA ', '').replace('CELINA', '').trim();
 
-            // SÚPER EXTRACTOR DE NÚMEROS (Limpia $, comas, letras y espacios)
             const cleanNumber = (val) => {
                 if (val === undefined || val === null || val === "") return "";
                 if (typeof val === 'number') return val;
                 let strVal = String(val).replace(/[^0-9.,]/g, '');
                 
-                if (strVal.includes(',') && !strVal.includes('.')) {
-                    strVal = strVal.replace(',', '.');
-                } else if (strVal.includes(',') && strVal.includes('.')) {
+                if (strVal.includes(',') && strVal.includes('.')) {
                     strVal = strVal.replace(/,/g, '');
+                } else if (strVal.includes(',')) {
+                    strVal = strVal.replace(',', '.');
                 }
                 
                 const num = Number(strVal);
@@ -106,8 +121,9 @@ export default function App() {
                 mzn: String(getValue(['mzn', 'manzano']) || "").toUpperCase().replace('MZN:', '').trim(),
                 lote: String(getValue(['lote']) || "").toUpperCase().replace('LOTE:', '').trim(),
                 categoria: String(getValue(['categoria', 'cat']) || "Estándar"),
-                superficie: cleanNumber(getValue(['superficie', 'sup', 'mt2'])),
-                precio: cleanNumber(getValue(['precio', 'preciomt2', 'usd'])) 
+                superficie: cleanNumber(getValue(['superficie', 'sup', 'mt2', 'm2'], ['precio', 'costo'])),
+                // Para el precio, busca la combinación exacta de precio y m2, evitando precios totales
+                precio: cleanNumber(getValue(['precio', 'mt2', 'm2', 'usd', 'us'], ['total', 'final', 'contado'])) 
             };
           });
 
@@ -153,7 +169,7 @@ export default function App() {
   const [uv, setUv] = useState("");
   const [mzn, setMzn] = useState("");
   const [lote, setLote] = useState("");
-  const [categoriaLote, setCategoriaLote] = useState(""); // NUEVO: Estado para categoría
+  const [categoriaLote, setCategoriaLote] = useState("");
   const [superficie, setSuperficie] = useState("");
   const [precio, setPrecio] = useState("");
   
