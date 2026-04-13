@@ -69,11 +69,11 @@ export default function App() {
           const rawData = JSON.parse(text);
           const dataArray = Array.isArray(rawData) ? rawData : [];
           
-          // --- AUTO-SANADOR DE DATOS (Escáner de Puntuación Inteligente) ---
+          // --- AUTO-SANADOR DE DATOS (Escáner de Puntuación Inteligente v2.0) ---
           const normalizedData = dataArray.map(item => {
             const rawKeys = Object.keys(item);
             
-            const getValue = (matchWords, avoidWords = []) => {
+            const getValue = (matchWords, highPriorityWords = [], avoidWords = []) => {
                 let bestKey = null;
                 let bestScore = -1;
 
@@ -85,8 +85,12 @@ export default function App() {
                         if (cleanKey.includes(w)) score += 10;
                     });
 
+                    highPriorityWords.forEach(w => {
+                        if (cleanKey.includes(w)) score += 50; // Super prioridad
+                    });
+
                     avoidWords.forEach(w => {
-                        if (cleanKey.includes(w)) score -= 20; // Huye de estas palabras
+                        if (cleanKey.includes(w)) score -= 100; // Huir de esta columna
                     });
 
                     if (score > bestScore && score > 0) {
@@ -106,9 +110,13 @@ export default function App() {
                 let strVal = String(val).replace(/[^0-9.,]/g, '');
                 
                 if (strVal.includes(',') && strVal.includes('.')) {
-                    strVal = strVal.replace(/,/g, '');
+                    if (strVal.indexOf(',') > strVal.indexOf('.')) {
+                        strVal = strVal.replace(/\./g, '').replace(',', '.'); // 1.234,56 -> 1234.56
+                    } else {
+                        strVal = strVal.replace(/,/g, ''); // 1,234.56 -> 1234.56
+                    }
                 } else if (strVal.includes(',')) {
-                    strVal = strVal.replace(',', '.');
+                    strVal = strVal.replace(',', '.'); // 145,5 -> 145.5
                 }
                 
                 const num = Number(strVal);
@@ -121,9 +129,9 @@ export default function App() {
                 mzn: String(getValue(['mzn', 'manzano']) || "").toUpperCase().replace('MZN:', '').trim(),
                 lote: String(getValue(['lote']) || "").toUpperCase().replace('LOTE:', '').trim(),
                 categoria: String(getValue(['categoria', 'cat']) || "Estándar"),
-                superficie: cleanNumber(getValue(['superficie', 'sup', 'mt2', 'm2'], ['precio', 'costo'])),
-                // Para el precio, busca la combinación exacta de precio y m2, evitando precios totales
-                precio: cleanNumber(getValue(['precio', 'mt2', 'm2', 'usd', 'us'], ['total', 'final', 'contado'])) 
+                superficie: cleanNumber(getValue(['superficie', 'sup', 'area'], ['m2', 'mt2'], ['precio', 'costo', 'valor'])),
+                // Busca precio, le da prioridad a m2/mt2, e ignora precios totales o finales
+                precio: cleanNumber(getValue(['precio', 'valor', 'costo'], ['m2', 'mt2', 'unitario', 'lista'], ['total', 'final', 'contado', 'credito'])) 
             };
           });
 
@@ -143,7 +151,7 @@ export default function App() {
           } else if (error.message === "ERROR_JSON") {
             setDbError("⚠️ El archivo lotes.json tiene un error de formato (JSON inválido).");
           } else if (error.message === "ENTORNO_VISTA_PREVIA" || error.name === "TypeError") {
-            setDbError("⚠️ Entorno de previsualización detectado. El modo inteligente se activará en tu versión publicada de Vercel.");
+            setDbError("⚠️ Entorno de previsualización. El modo inteligente se activará en Vercel.");
           } else {
             setDbError("❌ Error de red al conectar con la base de datos.");
           }
@@ -250,9 +258,9 @@ export default function App() {
     setLote(selectedLote);
     const loteData = lotesDisponibles.find(l => String(l.lote) === String(selectedLote));
     if (loteData) {
-      setSuperficie(loteData.superficie);
-      setPrecio(loteData.precio);
-      setCategoriaLote(loteData.categoria || "Estándar"); // Asignar categoría
+      if (loteData.superficie) setSuperficie(loteData.superficie);
+      if (loteData.precio) setPrecio(loteData.precio);
+      setCategoriaLote(loteData.categoria || "Estándar"); 
     }
   };
 
@@ -393,7 +401,6 @@ export default function App() {
     const inicio = `Me enorgullece presentarle su propuesta oficial:\n\n`;
     const nombreProyectoCapitalizado = resultado.proyecto.charAt(0).toUpperCase() + resultado.proyecto.slice(1).toLowerCase();
     
-    // AQUÍ AÑADIMOS LA CATEGORÍA AL MENSAJE DE WHATSAPP
     const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}*\n🏷️ Categoría: ${resultado.categoria}\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
     
     const precioLista = `💎 *Precio de Lista Original:* $ ${resultado.valorOriginal} (Bs. ${resultado.valorOriginalBs})\n\n`;
@@ -477,7 +484,6 @@ export default function App() {
   const showBonoInicial = ["OTRO"].includes(proyecto);
   const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER"].includes(proyecto);
 
-  // --- MOSTRAR PANTALLA DE CARGA ---
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B1121] flex items-center justify-center">
@@ -735,15 +741,29 @@ export default function App() {
                   </div>
                 )}
 
-                {/* SUP & PRECIO */}
+                {/* SUP & PRECIO - AHORA SON EDITABLES SIEMPRE */}
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Map className="w-4 h-4 text-emerald-400" /> Superficie (m²)</label>
-                    <input type="number" required value={superficie} onChange={e => setSuperficie(e.target.value)} placeholder="Ej. 240" readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 outline-none focus:border-emerald-500/30 focus:shadow-none cursor-default' : ''}`} />
+                    <input 
+                      type="number" 
+                      required 
+                      value={superficie} 
+                      onChange={e => setSuperficie(e.target.value)} 
+                      placeholder="Ej. 240" 
+                      className="w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors focus:bg-emerald-900/20" 
+                    />
                   </div>
                   <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-emerald-400" /> Precio / m²</label>
-                    <input type="number" required value={precio} onChange={e => setPrecio(e.target.value)} placeholder="Ej. 145" readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 outline-none focus:border-emerald-500/30 focus:shadow-none cursor-default' : ''}`} />
+                    <input 
+                      type="number" 
+                      required 
+                      value={precio} 
+                      onChange={e => setPrecio(e.target.value)} 
+                      placeholder="Ej. 145" 
+                      className="w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors focus:bg-emerald-900/20" 
+                    />
                   </div>
                 </div>
 
@@ -993,3 +1013,4 @@ export default function App() {
     </div>
   );
 }
+
