@@ -73,7 +73,6 @@ export default function App() {
           const normalizedData = dataArray.map(item => {
             const rawKeys = Object.keys(item);
             
-            // Busca la columna correcta aunque el usuario no le haya puesto el nombre exacto
             const getValue = (matchWords) => {
                 const foundKey = rawKeys.find(k => {
                     const cleanKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -82,30 +81,36 @@ export default function App() {
                 return foundKey ? item[foundKey] : "";
             };
 
-            // 1. Arreglar el Proyecto (Le quita la palabra CELINA si la tiene en el Excel)
             let rawProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "");
             let cleanProyecto = rawProyecto.toUpperCase().replace('CELINA ', '').replace('CELINA', '').trim();
 
-            // 2. Arreglar números con comas (ej. "240,5" se convierte a 240.5)
+            // SÚPER EXTRACTOR DE NÚMEROS (Limpia $, comas, letras y espacios)
             const cleanNumber = (val) => {
-                if (!val) return "";
+                if (val === undefined || val === null || val === "") return "";
                 if (typeof val === 'number') return val;
-                const strVal = String(val).replace(',', '.');
-                return Number(strVal) || val;
+                let strVal = String(val).replace(/[^0-9.,]/g, '');
+                
+                if (strVal.includes(',') && !strVal.includes('.')) {
+                    strVal = strVal.replace(',', '.');
+                } else if (strVal.includes(',') && strVal.includes('.')) {
+                    strVal = strVal.replace(/,/g, '');
+                }
+                
+                const num = Number(strVal);
+                return isNaN(num) ? "" : num;
             };
 
-            // 3. Arreglar y extraer UV, MZN y LOTE aunque vengan sucios
             return {
                 proyecto: cleanProyecto,
                 uv: String(getValue(['uv']) || "").toUpperCase().replace('UV:', '').trim(),
                 mzn: String(getValue(['mzn', 'manzano']) || "").toUpperCase().replace('MZN:', '').trim(),
                 lote: String(getValue(['lote']) || "").toUpperCase().replace('LOTE:', '').trim(),
-                superficie: cleanNumber(getValue(['superficie', 'sup'])),
-                precio: cleanNumber(getValue(['precio', 'preciomt2', 'mt2'])) 
+                categoria: String(getValue(['categoria', 'cat']) || "Estándar"),
+                superficie: cleanNumber(getValue(['superficie', 'sup', 'mt2'])),
+                precio: cleanNumber(getValue(['precio', 'preciomt2', 'usd'])) 
             };
           });
 
-          // Solo guardamos los lotes que sí tengan proyecto y número de lote válido
           const validLotes = normalizedData.filter(l => l.proyecto && l.lote);
 
           setLotesDB(validLotes);
@@ -127,7 +132,7 @@ export default function App() {
             setDbError("❌ Error de red al conectar con la base de datos.");
           }
         }
-        setLotesDB([]); // Fallback a vacío
+        setLotesDB([]); 
       } finally {
         setLoading(false);
       }
@@ -136,7 +141,10 @@ export default function App() {
     fetchLotes();
   }, []);
 
-  const [proyecto, setProyecto] = useState("MUYURINA");
+  const proyectosDesdeDB = [...new Set(lotesDB.map(l => l.proyecto))].filter(Boolean).sort();
+  const proyectosOptions = proyectosDesdeDB.length > 0 ? proyectosDesdeDB : ["MUYURINA", "SANTA FE", "EL RENACER", "LOS JARDINES", "CAÑAVERAL"];
+
+  const [proyecto, setProyecto] = useState(proyectosOptions[0] || "MUYURINA");
   const [proyectoPersonalizado, setProyectoPersonalizado] = useState("");
   
   const [nombreCliente, setNombreCliente] = useState("");
@@ -145,6 +153,7 @@ export default function App() {
   const [uv, setUv] = useState("");
   const [mzn, setMzn] = useState("");
   const [lote, setLote] = useState("");
+  const [categoriaLote, setCategoriaLote] = useState(""); // NUEVO: Estado para categoría
   const [superficie, setSuperficie] = useState("");
   const [precio, setPrecio] = useState("");
   
@@ -175,7 +184,6 @@ export default function App() {
   const resultsRef = useRef(null);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Inyectar fuentes
   useEffect(() => {
     const link = document.createElement('link');
     link.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap';
@@ -184,7 +192,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setUv(""); setMzn(""); setLote(""); setSuperficie(""); setPrecio("");
+    setUv(""); setMzn(""); setLote(""); setSuperficie(""); setPrecio(""); setCategoriaLote("");
     setInicialPorcentaje(""); setInicialMonto(""); setAños("");
     setResultado(null); setProyectoPersonalizado(""); setEscenarioA(null); setShowTablaPagos(false);
 
@@ -201,7 +209,6 @@ export default function App() {
       setModoManual(true);
     }
 
-    // Auto-activar modo manual si no hay base de datos disponible
     if (proyecto !== "OTRO") {
       setModoManual(lotesDB.length === 0);
     }
@@ -214,12 +221,12 @@ export default function App() {
 
   const handleUvChange = (e) => {
     setUv(e.target.value);
-    setMzn(""); setLote(""); setSuperficie(""); setPrecio("");
+    setMzn(""); setLote(""); setSuperficie(""); setPrecio(""); setCategoriaLote("");
   };
 
   const handleMznChange = (e) => {
     setMzn(e.target.value);
-    setLote(""); setSuperficie(""); setPrecio("");
+    setLote(""); setSuperficie(""); setPrecio(""); setCategoriaLote("");
   };
 
   const handleLoteChange = (e) => {
@@ -229,6 +236,7 @@ export default function App() {
     if (loteData) {
       setSuperficie(loteData.superficie);
       setPrecio(loteData.precio);
+      setCategoriaLote(loteData.categoria || "Estándar"); // Asignar categoría
     }
   };
 
@@ -328,6 +336,7 @@ export default function App() {
 
     setResultado({
       proyecto: nombreProyectoFinal, uv, mzn, lote, superficie: sup, precioM2: prec,
+      categoria: categoriaLote || "Estándar",
       cliente: nombreCliente || 'Cliente Preferencial', asesor: nombreAsesor,
       
       valorOriginal: formatMoney(valor_original), valorOriginalBs: formatMoney(valor_original * TIPO_CAMBIO),
@@ -367,7 +376,10 @@ export default function App() {
     if (!resultado) return "";
     const inicio = `Me enorgullece presentarle su propuesta oficial:\n\n`;
     const nombreProyectoCapitalizado = resultado.proyecto.charAt(0).toUpperCase() + resultado.proyecto.slice(1).toLowerCase();
-    const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}*\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
+    
+    // AQUÍ AÑADIMOS LA CATEGORÍA AL MENSAJE DE WHATSAPP
+    const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}*\n🏷️ Categoría: ${resultado.categoria}\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
+    
     const precioLista = `💎 *Precio de Lista Original:* $ ${resultado.valorOriginal} (Bs. ${resultado.valorOriginalBs})\n\n`;
     
     let arrContado = [];
@@ -438,7 +450,7 @@ export default function App() {
     setEscenarioA(null);
     setShowComparativa(false);
     setShowTablaPagos(false);
-    setUv(""); setMzn(""); setLote(""); setSuperficie(""); setPrecio("");
+    setUv(""); setMzn(""); setLote(""); setSuperficie(""); setPrecio(""); setCategoriaLote("");
     setAños(""); setInicialMonto(""); setInicialPorcentaje("");
     setNombreCliente("");
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -634,11 +646,9 @@ export default function App() {
                     )}
                   </div>
                   <select value={proyecto} onChange={e => setProyecto(e.target.value)} className="w-full glass-input rounded-2xl p-4 font-bold text-white text-base cursor-pointer">
-                    <option value="MUYURINA">MUYURINA</option>
-                    <option value="SANTA FE">SANTA FE</option>
-                    <option value="EL RENACER">EL RENACER</option>
-                    <option value="LOS JARDINES">LOS JARDINES</option>
-                    <option value="CAÑAVERAL">CAÑAVERAL</option>
+                    {proyectosOptions.map(p => (
+                       <option key={p} value={p}>{p}</option>
+                    ))}
                     <option value="OTRO">OTRO...</option>
                   </select>
                   {proyecto === "OTRO" && (
@@ -696,6 +706,16 @@ export default function App() {
                       <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">LOTE</label>
                       <input type="text" value={lote} onChange={e => setLote(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
                     </div>
+                  </div>
+                )}
+
+                {/* CATEGORÍA DEL LOTE (Si existe) */}
+                {!modoManual && proyecto !== "OTRO" && categoriaLote && (
+                  <div className="bg-[#1E293B]/60 border border-cyan-900/50 p-3 rounded-xl flex items-center gap-2 mt-2 mb-4 animate-in fade-in slide-in-from-top-2">
+                    <Tag className="w-4 h-4 text-cyan-400" />
+                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                      Categoría: <span className="text-white">{categoriaLote}</span>
+                    </span>
                   </div>
                 )}
 
@@ -799,7 +819,13 @@ export default function App() {
                   <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-[#1E293B]/60 p-4 rounded-2xl border border-slate-700/50">
                     <div className="flex items-center gap-4 pl-2">
                       <div className="bg-[#0F172A] p-3 rounded-xl border border-slate-700"><MapPin className="w-5 h-5 text-slate-400" /></div>
-                      <div><div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Proyecto</div><div className="text-white font-black text-lg uppercase tracking-tight">{resultado.proyecto}</div></div>
+                      <div>
+                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Proyecto</div>
+                        <div className="text-white font-black text-lg uppercase tracking-tight">{resultado.proyecto}</div>
+                        {resultado.categoria && resultado.categoria !== "Estándar" && (
+                          <div className="text-cyan-400 font-bold text-[9px] uppercase tracking-widest mt-0.5">{resultado.categoria}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <div className="text-center px-4 py-2 bg-[#0F172A] rounded-xl border border-slate-700"><div className="text-[8px] font-extrabold text-slate-500 uppercase">UV</div><div className="text-slate-300 font-bold text-sm">{resultado.uv || 'N/A'}</div></div>
