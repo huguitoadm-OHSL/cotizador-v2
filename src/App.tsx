@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check, MessageSquareText } from "lucide-react";
+import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check, MessageSquareText, Database, Edit3 } from "lucide-react";
 
 // --- COMPONENTE DE ANIMACIÓN DE NÚMEROS ---
 const AnimatedNumber = ({ value }) => {
@@ -48,6 +48,54 @@ export default function App() {
     }
   };
 
+  // --- ESTADOS DE DATOS (BASE DE DATOS EXTERNA) ---
+  const [lotesDB, setLotesDB] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  // --- EFECTO PARA CARGAR LOS 20,000 LOTES ---
+  useEffect(() => {
+    const fetchLotes = async () => {
+      try {
+        // En la vista previa (blob:) el fetch arroja TypeError al parsear URLs relativas. 
+        // Lo prevenimos verificando el entorno antes de hacer la petición.
+        if (window.location.protocol === 'blob:' || window.location.origin === 'null') {
+          throw new Error("ENTORNO_VISTA_PREVIA");
+        }
+
+        const response = await fetch('/lotes.json');
+        if (!response.ok) throw new Error("ERROR_404");
+        const text = await response.text();
+        
+        try {
+          const data = JSON.parse(text);
+          setLotesDB(Array.isArray(data) ? data : []);
+          setDbError(null);
+        } catch (e) {
+          throw new Error("ERROR_JSON");
+        }
+      } catch (error) {
+        // Asignar el mensaje de error para la interfaz sin arrojar logs alarmantes en la consola
+        if (error instanceof Error) {
+          if (error.message === "ERROR_404") {
+            setDbError("❌ Falta el archivo lotes.json en la carpeta 'public' de GitHub.");
+          } else if (error.message === "ERROR_JSON") {
+            setDbError("⚠️ El archivo lotes.json tiene un error de formato (JSON inválido).");
+          } else if (error.message === "ENTORNO_VISTA_PREVIA" || error.name === "TypeError") {
+            setDbError("⚠️ Entorno de previsualización detectado. El modo inteligente se activará en tu versión publicada de Vercel.");
+          } else {
+            setDbError("❌ Error de red al conectar con la base de datos.");
+          }
+        }
+        setLotesDB([]); // Fallback a vacío
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLotes();
+  }, []);
+
   const [proyecto, setProyecto] = useState("MUYURINA");
   const [proyectoPersonalizado, setProyectoPersonalizado] = useState("");
   
@@ -83,6 +131,7 @@ export default function App() {
   const [showComparativa, setShowComparativa] = useState(false);
   const [showTablaPagos, setShowTablaPagos] = useState(false);
   
+  const [modoManual, setModoManual] = useState(false);
   const resultsRef = useRef(null);
   const [isCopied, setIsCopied] = useState(false);
 
@@ -109,8 +158,39 @@ export default function App() {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(4);
     } else if (proyecto === "OTRO") {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0);
+      setModoManual(true);
     }
-  }, [proyecto]);
+
+    // Auto-activar modo manual si no hay base de datos disponible
+    if (proyecto !== "OTRO") {
+      setModoManual(lotesDB.length === 0);
+    }
+  }, [proyecto, lotesDB.length]);
+
+  // --- LÓGICA DE BÚSQUEDA INTELIGENTE EN CASCADA ---
+  const uvsDisponibles = [...new Set(lotesDB.filter(l => l.proyecto === proyecto).map(l => l.uv))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+  const mznsDisponibles = [...new Set(lotesDB.filter(l => l.proyecto === proyecto && String(l.uv) === String(uv)).map(l => l.mzn))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+  const lotesDisponibles = lotesDB.filter(l => l.proyecto === proyecto && String(l.uv) === String(uv) && String(l.mzn) === String(mzn)).sort((a,b) => String(a.lote).localeCompare(String(b.lote), undefined, {numeric: true}));
+
+  const handleUvChange = (e) => {
+    setUv(e.target.value);
+    setMzn(""); setLote(""); setSuperficie(""); setPrecio("");
+  };
+
+  const handleMznChange = (e) => {
+    setMzn(e.target.value);
+    setLote(""); setSuperficie(""); setPrecio("");
+  };
+
+  const handleLoteChange = (e) => {
+    const selectedLote = e.target.value;
+    setLote(selectedLote);
+    const loteData = lotesDisponibles.find(l => String(l.lote) === String(selectedLote));
+    if (loteData) {
+      setSuperficie(loteData.superficie);
+      setPrecio(loteData.precio);
+    }
+  };
 
   useEffect(() => {
     let pct = 0;
@@ -236,8 +316,6 @@ export default function App() {
     }, 100);
   };
 
-  // --- MENSAJES DIVIDIDOS ---
-  
   const generarMensajeParte1 = () => {
     if (!resultado) return "";
     return `Estimado(a) *${resultado.cliente}*, un gusto saludarle. Soy ${resultado.asesor || 'su Asesor Comercial'}.\n\n` +
@@ -297,7 +375,6 @@ export default function App() {
     window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
   };
 
-  // Función original de copiar todo junto por si acaso
   const copiarTextoTodo = () => {
     const mensaje = generarMensajeParte1() + "\n\n" + generarMensajeParte2();
     if (!mensaje) return;
@@ -332,19 +409,22 @@ export default function App() {
   const showBonoInicial = ["OTRO"].includes(proyecto);
   const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER"].includes(proyecto);
 
-  const projectImages = {
-    "MUYURINA": "/image_9f6ffd.jpg", 
-    "SANTA FE": "/06 (1).jpg",      
-    "EL RENACER": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=80",
-    "LOS JARDINES": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=1000&q=80",
-    "CAÑAVERAL": "https://images.unsplash.com/photo-1530836369250-ef71a3f5e4bf?auto=format&fit=crop&w=1000&q=80",
-    "OTRO": "/image_9f6ffd.jpg"
-  };
+  // --- MOSTRAR PANTALLA DE CARGA ---
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0B1121] flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-cyan-500 animate-spin mx-auto mb-4" />
+          <p className="text-white font-bold tracking-widest uppercase text-xs">Optimizando Base de Datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0B1121] relative font-['Plus_Jakarta_Sans'] text-slate-300 overflow-x-hidden selection:bg-cyan-500/30 selection:text-cyan-100">
       
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0B1121; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
@@ -377,7 +457,7 @@ export default function App() {
           outline: none;
         }
         .glass-input::placeholder { color: #475569; }
-      `}</style>
+      `}} />
 
       {/* FONDO GLOBAL OSCURO CON LA IMAGEN AÉREA */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
@@ -399,7 +479,7 @@ export default function App() {
 
             <h1 className="text-3xl sm:text-[2rem] font-extrabold text-white tracking-tight mb-2 drop-shadow-md">Acceso VIP</h1>
             <p className="text-slate-400/80 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] mb-10 leading-relaxed">
-              Uso Exclusivo Máquina de<br/>Ventas
+              Uso Exclusivo Máquina de<br />Ventas
             </p>
             
             <form onSubmit={handleLogin} className="space-y-5">
@@ -486,11 +566,33 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* PROYECTO */}
+                {/* MENSAJE DE DIAGNÓSTICO DE BASE DE DATOS */}
+                {dbError && (
+                  <div className="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl flex items-center justify-center text-center shadow-inner animate-in fade-in">
+                    <span className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">{dbError}</span>
+                  </div>
+                )}
+
+                {/* PROYECTO Y MODO */}
                 <div className="space-y-2.5">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-cyan-500" /> Proyecto
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-cyan-500" /> Proyecto
+                    </label>
+                    {proyecto !== "OTRO" && lotesDB.length > 0 && (
+                      <button 
+                        type="button" 
+                        onClick={() => setModoManual(!modoManual)} 
+                        className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 transition-all border ${modoManual ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-cyan-900/30 text-cyan-400 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]'}`}
+                      >
+                        {modoManual ? (
+                          <span className="flex items-center gap-1.5"><Edit3 className="w-3 h-3"/> {'Ingreso Manual'}</span>
+                        ) : (
+                          <span className="flex items-center gap-1.5"><Database className="w-3 h-3"/> {'Búsqueda Inteligente'}</span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                   <select value={proyecto} onChange={e => setProyecto(e.target.value)} className="w-full glass-input rounded-2xl p-4 font-bold text-white text-base cursor-pointer">
                     <option value="MUYURINA">MUYURINA</option>
                     <option value="SANTA FE">SANTA FE</option>
@@ -513,33 +615,59 @@ export default function App() {
                   )}
                 </div>
 
-                {/* UV / MZN / LOTE */}
-                <div className="bg-[#1E293B]/30 p-3 rounded-2xl border border-slate-700/50 flex justify-between gap-3">
-                  <div className="space-y-1.5 text-center w-full">
-                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">UV</label>
-                    <input type="text" value={uv} onChange={e => setUv(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
+                {/* UV / MZN / LOTE (Dinámico según Modo) */}
+                {!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? (
+                  <div className="bg-cyan-900/10 p-4 rounded-2xl border border-cyan-500/30 grid grid-cols-3 gap-3 shadow-inner animate-in fade-in">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest text-center block">Elegir UV</label>
+                      <select value={uv} onChange={handleUvChange} className="w-full bg-[#0F172A] border border-cyan-900/50 rounded-xl p-2.5 text-center font-bold text-white outline-none focus:border-cyan-400 text-sm">
+                        <option value="" disabled hidden>---</option>
+                        {uvsDisponibles.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest text-center block">Elegir MZN</label>
+                      <select value={mzn} onChange={handleMznChange} disabled={!uv} className="w-full bg-[#0F172A] border border-cyan-900/50 rounded-xl p-2.5 text-center font-bold text-white outline-none focus:border-cyan-400 disabled:opacity-50 text-sm">
+                        <option value="" disabled hidden>---</option>
+                        {mznsDisponibles.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest text-center block">Elegir LOTE</label>
+                      <select value={lote} onChange={handleLoteChange} disabled={!mzn} className="w-full bg-[#0F172A] border border-cyan-900/50 rounded-xl p-2.5 text-center font-bold text-white outline-none focus:border-cyan-400 disabled:opacity-50 text-sm">
+                        <option value="" disabled hidden>---</option>
+                        {lotesDisponibles.map(l => <option key={l.lote} value={l.lote}>{l.lote}</option>)}
+                      </select>
+                    </div>
                   </div>
-                  <div className="w-px bg-slate-700/50"></div>
-                  <div className="space-y-1.5 text-center w-full">
-                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">MZN</label>
-                    <input type="text" value={mzn} onChange={e => setMzn(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
+                ) : (
+                  <div className="bg-[#1E293B]/30 p-3 rounded-2xl border border-slate-700/50 flex justify-between gap-3 animate-in fade-in">
+                    <div className="space-y-1.5 text-center w-full">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">UV</label>
+                      <input type="text" value={uv} onChange={e => setUv(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
+                    </div>
+                    <div className="w-px bg-slate-700/50"></div>
+                    <div className="space-y-1.5 text-center w-full">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">MZN</label>
+                      <input type="text" value={mzn} onChange={e => setMzn(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
+                    </div>
+                    <div className="w-px bg-slate-700/50"></div>
+                    <div className="space-y-1.5 text-center w-full">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">LOTE</label>
+                      <input type="text" value={lote} onChange={e => setLote(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
+                    </div>
                   </div>
-                  <div className="w-px bg-slate-700/50"></div>
-                  <div className="space-y-1.5 text-center w-full">
-                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">LOTE</label>
-                    <input type="text" value={lote} onChange={e => setLote(e.target.value)} placeholder="Opc" className="w-full bg-transparent text-center font-bold text-white outline-none border-b border-transparent focus:border-cyan-500 transition-colors pb-1" />
-                  </div>
-                </div>
+                )}
 
                 {/* SUP & PRECIO */}
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Map className="w-4 h-4 text-emerald-400" /> Superficie (m²)</label>
-                    <input type="number" required value={superficie} onChange={e => setSuperficie(e.target.value)} placeholder="Ej. 240" className="w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg" />
+                    <input type="number" required value={superficie} onChange={e => setSuperficie(e.target.value)} placeholder="Ej. 240" readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 outline-none focus:border-emerald-500/30 focus:shadow-none cursor-default' : ''}`} />
                   </div>
                   <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-emerald-400" /> Precio / m²</label>
-                    <input type="number" required value={precio} onChange={e => setPrecio(e.target.value)} placeholder="Ej. 145" className="w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg" />
+                    <input type="number" required value={precio} onChange={e => setPrecio(e.target.value)} placeholder="Ej. 145" readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 outline-none focus:border-emerald-500/30 focus:shadow-none cursor-default' : ''}`} />
                   </div>
                 </div>
 
@@ -548,7 +676,7 @@ export default function App() {
                   <div className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest flex items-center gap-2 mb-4"><Gift className="w-4 h-4" /> Descuentos Promocionales</div>
                   <div className="grid grid-cols-2 gap-4">
                     {showDescPorcentaje && (
-                      <>
+                      <React.Fragment>
                         <div className="space-y-1.5">
                           <label className="flex items-center gap-2 text-[11px] font-bold text-slate-400"><input type="checkbox" checked={aplicarDescContadoPct} onChange={e => setAplicarDescContadoPct(e.target.checked)} className="accent-emerald-500" /> A Contado (%)</label>
                           <input type="number" step="0.01" disabled={!aplicarDescContadoPct} value={descuentoContado} onChange={e=>setDescuentoContado(e.target.value)} className="w-full glass-input rounded-xl p-3 font-bold text-sm" />
@@ -557,7 +685,7 @@ export default function App() {
                           <label className="flex items-center gap-2 text-[11px] font-bold text-slate-400"><input type="checkbox" checked={aplicarDescCreditoPct} onChange={e => setAplicarDescCreditoPct(e.target.checked)} className="accent-emerald-500" /> A Crédito (%)</label>
                           <input type="number" step="0.01" disabled={!aplicarDescCreditoPct} value={descuentoCredito} onChange={e=>setDescuentoCredito(e.target.value)} className="w-full glass-input rounded-xl p-3 font-bold text-sm" />
                         </div>
-                      </>
+                      </React.Fragment>
                     )}
                     {showDescM2 && (
                       <div className="space-y-1.5">
@@ -722,10 +850,10 @@ export default function App() {
                   <div className="flex flex-col gap-3 mt-8">
                     <div className="grid grid-cols-2 gap-3">
                       <button onClick={enviarWhatsAppParte1} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-[0_0_15px_rgba(52,211,153,0.2)] flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest transition-all">
-                        <MessageSquareText className="w-4 h-4"/> 1️⃣ Enviar Intro
+                        <MessageSquareText className="w-4 h-4"/> {'1️⃣ Enviar Intro'}
                       </button>
                       <button onClick={enviarWhatsAppParte2} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold py-3.5 rounded-xl shadow-[0_0_15px_rgba(52,211,153,0.2)] flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest transition-all">
-                        <Send className="w-4 h-4"/> 2️⃣ Enviar Cotización
+                        <Send className="w-4 h-4"/> {'2️⃣ Enviar Cotización'}
                       </button>
                     </div>
                     
