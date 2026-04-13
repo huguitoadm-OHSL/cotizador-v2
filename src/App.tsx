@@ -741,7 +741,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* SUP & PRECIO - AHORA SON EDITABLES SIEMPRE */}
+                {/* SUP & PRECIO - CON CANDADO EN BÚSQUEDA INTELIGENTE */}
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2.5">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Map className="w-4 h-4 text-emerald-400" /> Superficie (m²)</label>
@@ -751,7 +751,8 @@ export default function App() {
                       value={superficie} 
                       onChange={e => setSuperficie(e.target.value)} 
                       placeholder="Ej. 240" 
-                      className="w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors focus:bg-emerald-900/20" 
+                      readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0}
+                      className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 outline-none focus:border-emerald-500/30 focus:shadow-none cursor-default' : 'focus:bg-emerald-900/20'}`} 
                     />
                   </div>
                   <div className="space-y-2.5">
@@ -762,7 +763,8 @@ export default function App() {
                       value={precio} 
                       onChange={e => setPrecio(e.target.value)} 
                       placeholder="Ej. 145" 
-                      className="w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors focus:bg-emerald-900/20" 
+                      readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0}
+                      className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg transition-colors ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 outline-none focus:border-emerald-500/30 focus:shadow-none cursor-default' : 'focus:bg-emerald-900/20'}`} 
                     />
                   </div>
                 </div>
@@ -1013,4 +1015,3 @@ export default function App() {
     </div>
   );
 }
-
