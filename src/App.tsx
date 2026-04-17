@@ -346,22 +346,33 @@ export default function App() {
     const total_pagado_credito = cuota_inicial + (cuota_final * meses);
 
     const tablaPlazos = [];
+    const TIPO_CAMBIO = 6.97;
+
     for (let i = 10; i >= 1; i--) {
         const m = i * 12;
         let p_puro_i = tasa === 0 ? (saldo / m) : (saldo * (tasa * Math.pow(1 + tasa, m)) / (Math.pow(1 + tasa, m) - 1));
         const fSeguro_i = baseSeguro[i] ? (baseSeguro[i] / refSaldo) : (26.38 / refSaldo);
         const seg_i = saldo * fSeguro_i;
         const c_final_i = p_puro_i + seg_i + cbdi;
-        tablaPlazos.push({ años: i, meses: m, cuota_inicial: formatMoney(cuota_inicial), cuota_mensual: formatMoney(c_final_i) });
+        
+        tablaPlazos.push({ 
+          años: i, 
+          meses: m, 
+          cuota_inicial: formatMoney(cuota_inicial), 
+          cuota_mensual: formatMoney(c_final_i),
+          cuota_mensual_bs: formatMoney(c_final_i * TIPO_CAMBIO) // NUEVO: Mensual en Bolivianos
+        });
     }
 
-    const TIPO_CAMBIO = 6.97;
     const nombreProyectoFinal = proyecto === "OTRO" ? proyectoPersonalizado : proyecto;
 
     setResultado({
       proyecto: nombreProyectoFinal, uv, mzn, lote, superficie: sup, precioM2: prec,
       categoria: categoriaLote || "Estándar",
       cliente: nombreCliente || 'Cliente Preferencial', asesor: nombreAsesor,
+      
+      valorOriginalRaw: valor_original,
+      valorContadoRaw: valor_contado,
       
       valorOriginal: formatMoney(valor_original), valorOriginalBs: formatMoney(valor_original * TIPO_CAMBIO),
       valorContado: formatMoney(valor_contado), valorContadoBs: formatMoney(valor_contado * TIPO_CAMBIO),
@@ -412,10 +423,14 @@ export default function App() {
     if (descM2ContadoVal > 0) arrContado.push(`$${descM2ContadoVal}/m²`);
 
     let contadoStr = "";
-    if (arrContado.length > 0) {
-        contadoStr = `💰 *Opción 1: Al Contado - ¡Con ${arrContado.join(' + ')} de descuento!*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
-    } else {
-        contadoStr = `💰 *Opción 1: Al Contado*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
+    
+    // NUEVA LÓGICA: Solo mostrar la opción al contado si hay un ahorro real
+    if (resultado.valorContadoRaw < resultado.valorOriginalRaw) {
+        if (arrContado.length > 0) {
+            contadoStr = `💰 *Opción 1: Al Contado - ¡Con ${arrContado.join(' + ')} de descuento!*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
+        } else {
+            contadoStr = `💰 *Opción 1: Al Contado*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
+        }
     }
 
     let arrCredito = [];
@@ -423,10 +438,13 @@ export default function App() {
     if (resultado.descuentoM2 > 0) arrCredito.push(`$${resultado.descuentoM2}/m²`);
     
     let creditoStr = "";
+    // Si la opción 1 no existe, cambiamos el título a "Opción de Financiamiento" en vez de "Opción 2"
+    const tituloCredito = contadoStr !== "" ? "✅ *Opción 2: A Plazos" : "💳 *Opción de Financiamiento";
+
     if (arrCredito.length > 0) {
-        creditoStr = `✅ *Opción 2: A Plazos - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
+        creditoStr = `${tituloCredito} - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
     } else {
-        creditoStr = `✅ *Opción 2: A Plazos*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
+        creditoStr = `${tituloCredito}*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
     }
 
     const financiamiento = `📊 *Plan de Financiamiento* (${resultado.plazo} años)\n` +
@@ -879,11 +897,20 @@ export default function App() {
                       <div className="text-3xl font-black text-white mt-1">$ {resultado.valorOriginal}</div>
                     </div>
 
-                    <div className="bg-emerald-500/10 p-6 rounded-2xl border border-emerald-500/30 shadow-[inset_0_0_20px_rgba(52,211,153,0.05)] relative overflow-hidden flex flex-col justify-center">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -z-10"></div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-1 flex items-center gap-1.5"><Tag className="w-3 h-3"/> Oferta al Contado</div>
-                      <div className="text-3xl font-black text-emerald-400 tracking-tight">$ {resultado.valorContado}</div>
-                    </div>
+                    {/* SÚPER MEJORA: Solo mostramos la oferta al contado si realmente hay descuento, si no, mostramos el beneficio del crédito */}
+                    {resultado.valorContadoRaw < resultado.valorOriginalRaw ? (
+                      <div className="bg-emerald-500/10 p-6 rounded-2xl border border-emerald-500/30 shadow-[inset_0_0_20px_rgba(52,211,153,0.05)] relative overflow-hidden flex flex-col justify-center">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -z-10"></div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-1 flex items-center gap-1.5"><Tag className="w-3 h-3"/> Oferta al Contado</div>
+                        <div className="text-3xl font-black text-emerald-400 tracking-tight">$ {resultado.valorContado}</div>
+                      </div>
+                    ) : (
+                      <div className="bg-cyan-500/10 p-6 rounded-2xl border border-cyan-500/30 shadow-[inset_0_0_20px_rgba(6,182,212,0.05)] relative overflow-hidden flex flex-col justify-center">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl -z-10"></div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-cyan-400 mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3"/> Ahorro Total a Plazos</div>
+                        <div className="text-3xl font-black text-cyan-400 tracking-tight">$ {resultado.ahorroCredito}</div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Financiamiento Cards */}
@@ -976,7 +1003,7 @@ export default function App() {
                     <button onClick={()=>setShowTablaPagos(!showTablaPagos)} className="w-full bg-[#1E293B] hover:bg-[#2A374F] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase tracking-wider transition-colors mt-1"><TableProperties className="w-4 h-4"/> Ver Plan de Pagos Completo</button>
                   </div>
 
-                  {/* TABLA DE PLAN DE PAGOS DARK */}
+                  {/* TABLA DE PLAN DE PAGOS DARK (AHORA CON BS) */}
                   {showTablaPagos && (
                     <div className="mt-4 bg-[#0F172A] rounded-2xl border border-slate-700 overflow-hidden animate-in slide-in-from-top-4">
                       <div className="bg-[#1E293B] p-4 border-b border-slate-700">
@@ -986,18 +1013,18 @@ export default function App() {
                         <thead className="bg-[#0F172A] text-slate-500 uppercase font-bold">
                           <tr>
                             <th className="px-4 py-3 text-center border-b border-slate-800">Año</th>
-                            <th className="px-4 py-3 text-center border-b border-slate-800">Meses</th>
-                            <th className="px-4 py-3 text-center border-b border-slate-800">Inicial</th>
-                            <th className="px-4 py-3 text-center border-b border-slate-800">Mensual</th>
+                            <th className="px-4 py-3 text-center border-b border-slate-800">Inicial ($us)</th>
+                            <th className="px-4 py-3 text-center border-b border-slate-800">Mensual ($us)</th>
+                            <th className="px-4 py-3 text-center border-b border-slate-800 text-cyan-500">Mensual (Bs)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {resultado.tablaPlazos.map((row, i) => (
                                <tr key={i} className={`border-b border-slate-800/50 hover:bg-[#1E293B]/50 transition-colors ${row.años === resultado.plazo ? 'bg-cyan-900/10 border-l-2 border-l-cyan-500' : ''}`}>
                                  <td className="px-4 py-3 font-bold text-slate-300 text-center">{row.años}</td>
-                                 <td className="px-4 py-3 text-center text-slate-500">{row.meses}</td>
-                                 <td className="px-4 py-3 text-center text-slate-500">{row.cuota_inicial}</td>
-                                 <td className="px-4 py-3 font-black text-cyan-400 text-center">{row.cuota_mensual}</td>
+                                 <td className="px-4 py-3 text-center text-slate-500">${row.cuota_inicial}</td>
+                                 <td className="px-4 py-3 font-black text-white text-center">${row.cuota_mensual}</td>
+                                 <td className="px-4 py-3 font-black text-cyan-400 text-center">Bs. {row.cuota_mensual_bs}</td>
                                </tr>
                           ))}
                         </tbody>
