@@ -1,23 +1,21 @@
 {
   "short_name": "Cotizador",
-  "name": "Cotizador Pro",
+  "name": "Cotizador Pro Celina",
+  "start_url": "/?standalone=true",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0B1121",
+  "background_color": "#0B1121",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/logo.png?v=3",
       "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
+      "sizes": "192x192"
     },
     {
-      "src": "/logo.png",
+      "src": "/logo.png?v=3",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
+      "sizes": "512x512"
     }
-  ],
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0B1121",
-  "background_color": "#0B1121"
+  ]
 }
