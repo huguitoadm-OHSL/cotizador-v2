@@ -5,16 +5,11 @@
     {
       "src": "/logo.png",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/logo.png",
-      "type": "image/png",
-      "sizes": "512x512",
+      "sizes": "any",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "/?app=true",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0B1121",
