@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Cotizador Pro | Grupo Paz</title>
     
-    <link rel="manifest" href="/manifest.json?v=6" />
-    <link rel="icon" type="image/png" href="/logo.png?v=6" />
-    <link rel="apple-touch-icon" href="/logo.png?v=6" />
+    <link rel="manifest" href="/manifest.json?v=7" />
+    <link rel="icon" type="image/png" href="/logo.png?v=7" />
+    <link rel="apple-touch-icon" href="/logo.png?v=7" />
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -19,7 +19,15 @@
   </head>
   <body class="bg-[#0B1121]">
     <div id="root"></div>
-    <!-- ¡CORREGIDO! Vuelve a ser .tsx como lo pide tu proyecto -->
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- CONEXIÓN DEL SERVICE WORKER -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
   </body>
 </html>
