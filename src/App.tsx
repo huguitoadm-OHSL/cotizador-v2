@@ -51,7 +51,7 @@ export default function App() {
   // --- ESTADOS DE DATOS (BASE DE DATOS EXTERNA) ---
   const [lotesDB, setLotesDB] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dbError, setDbError] = useState<string | null>(null);
+  const [dbError, setDbError] = useState(null);
 
   // --- EFECTO PARA CARGAR LOS 20,000 LOTES ---
   useEffect(() => {
@@ -86,11 +86,11 @@ export default function App() {
                     });
 
                     highPriorityWords.forEach(w => {
-                        if (cleanKey.includes(w)) score += 50; // Super prioridad
+                        if (cleanKey.includes(w)) score += 50; 
                     });
 
                     avoidWords.forEach(w => {
-                        if (cleanKey.includes(w)) score -= 100; // Huir de esta columna
+                        if (cleanKey.includes(w)) score -= 100; 
                     });
 
                     if (score > bestScore && score > 0) {
@@ -111,12 +111,12 @@ export default function App() {
                 
                 if (strVal.includes(',') && strVal.includes('.')) {
                     if (strVal.indexOf(',') > strVal.indexOf('.')) {
-                        strVal = strVal.replace(/\./g, '').replace(',', '.'); // 1.234,56 -> 1234.56
+                        strVal = strVal.replace(/\./g, '').replace(',', '.'); 
                     } else {
-                        strVal = strVal.replace(/,/g, ''); // 1,234.56 -> 1234.56
+                        strVal = strVal.replace(/,/g, ''); 
                     }
                 } else if (strVal.includes(',')) {
-                    strVal = strVal.replace(',', '.'); // 145,5 -> 145.5
+                    strVal = strVal.replace(',', '.'); 
                 }
                 
                 const num = Number(strVal);
@@ -130,7 +130,6 @@ export default function App() {
                 lote: String(getValue(['lote']) || "").toUpperCase().replace('LOTE:', '').trim(),
                 categoria: String(getValue(['categoria', 'cat']) || "Estándar"),
                 superficie: cleanNumber(getValue(['superficie', 'sup', 'area'], ['m2', 'mt2'], ['precio', 'costo', 'valor'])),
-                // Busca precio, le da prioridad a m2/mt2, e ignora precios totales o finales
                 precio: cleanNumber(getValue(['precio', 'valor', 'costo'], ['m2', 'mt2', 'unitario', 'lista'], ['total', 'final', 'contado', 'credito'])) 
             };
           });
@@ -139,8 +138,6 @@ export default function App() {
 
           setLotesDB(validLotes);
           setDbError(null);
-          console.log("Base de datos cargada y SANADA con éxito. Total:", validLotes.length);
-
         } catch (e) {
           throw new Error("ERROR_JSON");
         }
@@ -360,7 +357,7 @@ export default function App() {
           meses: m, 
           cuota_inicial: formatMoney(cuota_inicial), 
           cuota_mensual: formatMoney(c_final_i),
-          cuota_mensual_bs: formatMoney(c_final_i * TIPO_CAMBIO) // NUEVO: Mensual en Bolivianos
+          cuota_mensual_bs: formatMoney(c_final_i * TIPO_CAMBIO)
         });
     }
 
@@ -424,7 +421,6 @@ export default function App() {
 
     let contadoStr = "";
     
-    // NUEVA LÓGICA: Solo mostrar la opción al contado si hay un ahorro real
     if (resultado.valorContadoRaw < resultado.valorOriginalRaw) {
         if (arrContado.length > 0) {
             contadoStr = `💰 *Opción 1: Al Contado - ¡Con ${arrContado.join(' + ')} de descuento!*\n*Inversión Final:* $${resultado.valorContado} (Bs. ${resultado.valorContadoBs})\n\n`;
@@ -438,7 +434,6 @@ export default function App() {
     if (resultado.descuentoM2 > 0) arrCredito.push(`$${resultado.descuentoM2}/m²`);
     
     let creditoStr = "";
-    // Si la opción 1 no existe, cambiamos el título a "Opción de Financiamiento" en vez de "Opción 2"
     const tituloCredito = contadoStr !== "" ? "✅ *Opción 2: A Plazos" : "💳 *Opción de Financiamiento";
 
     if (arrCredito.length > 0) {
@@ -551,10 +546,9 @@ export default function App() {
         .glass-input::placeholder { color: #475569; }
       `}} />
 
-      {/* FONDO GLOBAL OSCURO CON LA IMAGEN AÉREA */}
+      {/* FONDO GLOBAL OSCURO (Con gradientes limpios) */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <img src="/image_9f6ffd.jpg" className="absolute inset-0 w-full h-full object-cover opacity-[0.15] filter blur-[6px] scale-105" alt="Background" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1121]/80 via-[#0B1121]/90 to-[#0B1121]"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1121]/90 via-[#0B1121]/95 to-[#0B1121]"></div>
         <div className="absolute top-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-cyan-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
         <div className="absolute bottom-[10%] right-[-5%] w-[35rem] h-[35rem] bg-emerald-900/20 rounded-full mix-blend-screen filter blur-[100px]"></div>
       </div>
@@ -897,7 +891,6 @@ export default function App() {
                       <div className="text-3xl font-black text-white mt-1">$ {resultado.valorOriginal}</div>
                     </div>
 
-                    {/* SÚPER MEJORA: Solo mostramos la oferta al contado si realmente hay descuento, si no, mostramos el beneficio del crédito */}
                     {resultado.valorContadoRaw < resultado.valorOriginalRaw ? (
                       <div className="bg-emerald-500/10 p-6 rounded-2xl border border-emerald-500/30 shadow-[inset_0_0_20px_rgba(52,211,153,0.05)] relative overflow-hidden flex flex-col justify-center">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -z-10"></div>
