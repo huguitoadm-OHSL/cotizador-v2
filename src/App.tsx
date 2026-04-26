@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check, MessageSquareText, Database, Edit3, Printer } from "lucide-react";
+import { Calculator, Send, Map, DollarSign, Percent, Calendar, CheckCircle2, Building2, ChevronRight, FileText, Tag, MapPin, Gift, Sparkles, TrendingUp, ShieldCheck, Scale, TableProperties, UserCircle, BadgeCheck, X, Activity, Lock, Copy, RefreshCw, Check, MessageSquareText, Database, Edit3, Printer, BarChart3, Star, Flame } from "lucide-react";
 
 // --- COMPONENTE DE ANIMACIÓN DE NÚMEROS ---
 const AnimatedNumber = ({ value }) => {
@@ -175,6 +175,15 @@ export default function App() {
   const resultsRef = useRef(null);
   const [isCopied, setIsCopied] = useState(false);
 
+  // --- HELPER: SEMÁFORO DE DISPONIBILIDAD (GATILLO DE ESCASEZ) ---
+  const getLoteStatus = (cat) => {
+    const c = String(cat).toUpperCase();
+    if (c.includes("ESQUINA") || c.includes("PARQUE") || c.includes("AVENIDA") || c.includes("COMERCIAL") || c.includes("VIP") || c.includes("ESTRATEGICO") || c.includes("ESTRATÉGICO") || c.includes("ESPECIAL")) {
+      return { type: 'premium', icon: <Star className="w-5 h-5 text-amber-400" />, text: "Lote Estratégico", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/30", desc: "Alta demanda por ubicación privilegiada." };
+    }
+    return { type: 'hot', icon: <Flame className="w-5 h-5 text-rose-400" />, text: "Alta Demanda", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/30", desc: "Últimos lotes disponibles en esta manzana." };
+  };
+
   useEffect(() => {
     const link = document.createElement('link');
     link.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap';
@@ -188,9 +197,9 @@ export default function App() {
     setResultado(null); setProyectoPersonalizado(""); setEscenarioA(null); setShowTablaPagos(false);
     setAplicarDescContadoPct(true); setAplicarDescCreditoPct(true); setAplicarDescM2(true); setAplicarDescContadoM2(true); setAplicarBonoInicialOtro(true);
 
-    if (proyecto === "MUYURINA" || proyecto === "SANTA FE") {
+    if (proyecto === "MUYURINA") {
       setDescuentoCredito(20); setDescuentoContado(30); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0);
-    } else if (["EL RENACER", "LOS JARDINES", "RANCHO NUEVO"].includes(proyecto)) {
+    } else if (["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE"].includes(proyecto)) {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(3);
     } else if (proyecto === "CAÑAVERAL") {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(4);
@@ -231,9 +240,9 @@ export default function App() {
     
     // REGLAS PROMOCIONALES ABRIL 2026
     if (pct > 0) {
-      if (proyecto === "MUYURINA" || proyecto === "SANTA FE") {
+      if (proyecto === "MUYURINA") {
         if (pct >= 4.99) setDescuentoCredito(23); else setDescuentoCredito(20);
-      } else if (["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO"].includes(proyecto)) {
+      } else if (["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO", "SANTA FE"].includes(proyecto)) {
         if (pct >= 5) setDescuentoM2(2); else setDescuentoM2(1);
       }
     }
@@ -308,9 +317,33 @@ export default function App() {
         tablaPlazos.push({ años: i, meses: m, cuota_inicial: formatMoney(cuota_inicial), cuota_mensual: formatMoney(c_final_i), cuota_mensual_bs: formatMoney(c_final_i * TIPO_CAMBIO) });
     }
 
+    // --- CÁLCULO DE PLUSVALÍA (12% Anual) ---
+    const tasaPlusvaliaAnual = 0.12; 
+    const proyeccionPlusvalia = [];
+    const valorBaseInversion = valor_original; 
+    let maxValuePlusvalia = valorBaseInversion * Math.pow(1 + tasaPlusvaliaAnual, ans);
+
+    // Calculamos para mostrar máximo 5 o 6 barras para no saturar el diseño
+    let intervalos = [];
+    if (ans <= 5) {
+        for (let i = 0; i <= ans; i++) intervalos.push(i);
+    } else {
+        intervalos = [0, 2, Math.floor(ans/2), ans-2, ans];
+        intervalos = [...new Set(intervalos)].sort((a,b)=>a-b); // Quitar duplicados
+    }
+
+    intervalos.forEach(i => {
+       let valorAnio = valorBaseInversion * Math.pow(1 + tasaPlusvaliaAnual, i);
+       proyeccionPlusvalia.push({
+           anio: i,
+           etiqueta: i === 0 ? "Hoy" : `Año ${i}`,
+           valor: valorAnio,
+           valorFormat: formatMoney(valorAnio),
+           alturaPorcentaje: (valorAnio / maxValuePlusvalia) * 100
+       });
+    });
+
     const nombreProyectoFinal = proyecto === "OTRO" ? proyectoPersonalizado : proyecto;
-    
-    // Auto-generar fecha para el PDF
     const fechaActual = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
     setResultado({
@@ -330,7 +363,8 @@ export default function App() {
       inicialBs: formatMoney(cuota_inicial * TIPO_CAMBIO), inicial: formatMoney(cuota_inicial),
       pagoAmortizacion: formatMoney(pago_puro), seguro: formatMoney(seguro), cbdi: formatMoney(cbdi),
       plazo: ans, meses: meses, pctInicial: parseFloat(pct_inicial_real.toFixed(2)),
-      mensual: formatMoney(cuota_final), mensualBs: formatMoney(cuota_final * TIPO_CAMBIO), tablaPlazos: tablaPlazos
+      mensual: formatMoney(cuota_final), mensualBs: formatMoney(cuota_final * TIPO_CAMBIO), tablaPlazos: tablaPlazos,
+      proyeccionPlusvalia: proyeccionPlusvalia
     });
 
     setTimeout(() => { resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
@@ -352,7 +386,7 @@ export default function App() {
     
     let arrContado = [];
     if (resultado.porcentajeContado > 0) arrContado.push(`${resultado.porcentajeContado}%`);
-    let isProyectosEspeciales = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO"].includes(resultado.proyecto.toUpperCase());
+    let isProyectosEspeciales = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO", "SANTA FE"].includes(resultado.proyecto.toUpperCase());
     let descM2ContadoVal = isProyectosEspeciales ? Number(resultado.descuentoContadoM2 || 0) : Number(resultado.descuentoM2 || 0) + Number(resultado.descuentoContadoM2 || 0);
     if (descM2ContadoVal > 0) arrContado.push(`$${descM2ContadoVal}/m²`);
 
@@ -369,12 +403,14 @@ export default function App() {
     const tituloCredito = contadoStr !== "" ? "✅ *Opción 2: A Plazos" : "💳 *Opción de Financiamiento";
     creditoStr = arrCredito.length > 0 ? `${tituloCredito} - ¡Con ${arrCredito.join(' + ')} de descuento!*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n` : `${tituloCredito}*\n*Total a Financiar:* $ ${formatMoney(resultado.valorCreditoRaw)} (Bs. ${resultado.valorCreditoBs})\n\n`;
 
-    const financiamiento = `📊 *Plan de Financiamiento* (${resultado.plazo} años)\n` +
+    const financiamiento = `📊 *Plan de Pagos* (${resultado.plazo} años)\n` +
       `*Cuota inicial (${resultado.pctInicial}%):* $${formatMoney(resultado.inicialRaw)} (Bs. ${resultado.inicialBs})\n` +
       `*Cuota mensual fija:* $${formatMoney(resultado.mensualRaw)} (Bs. ${formatMoney(resultado.mensualBsRaw)})\n\n`;
 
+    const plusvalia = `📈 *Plusvalía Proyectada (12% anual est.):*\nSu terreno de $${resultado.valorOriginal} proyecta alcanzar un valor de *+$${resultado.proyeccionPlusvalia[resultado.proyeccionPlusvalia.length-1].valorFormat}* al finalizar su plan de ${resultado.plazo} años. ¡No solo compra tierra, asegura su patrimonio!\n\n`;
+
     const cierre = `¿Le gustaría agendar una visita al terreno para dar ese "pequeño inicio" hacia su gran proyecto? Quedo a su entera disposición. 🤝`;
-    return inicio + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + cierre;
+    return inicio + ubicacion + precioLista + contadoStr + creditoStr + financiamiento + plusvalia + cierre;
   };
 
   const enviarWhatsAppParte1 = () => window.open(`https://wa.me/?text=${encodeURIComponent(generarMensajeParte1())}`, '_blank');
@@ -399,10 +435,10 @@ export default function App() {
     }, 300);
   };
 
-  const showDescPorcentaje = ["MUYURINA", "SANTA FE", "OTRO"].includes(proyecto);
-  const showDescM2 = ["EL RENACER", "LOS JARDINES", "CAÑAVERAL", "RANCHO NUEVO", "OTRO"].includes(proyecto);
+  const showDescPorcentaje = ["MUYURINA", "OTRO"].includes(proyecto);
+  const showDescM2 = ["EL RENACER", "LOS JARDINES", "CAÑAVERAL", "RANCHO NUEVO", "SANTA FE", "OTRO"].includes(proyecto);
   const showBonoInicial = ["OTRO"].includes(proyecto);
-  const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO"].includes(proyecto);
+  const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO", "SANTA FE"].includes(proyecto);
 
   if (loading) return <div className="min-h-screen bg-[#0B1121] flex items-center justify-center"><RefreshCw className="w-12 h-12 text-cyan-500 animate-spin mx-auto mb-4" /></div>;
 
@@ -527,7 +563,23 @@ export default function App() {
                   </div>
                 )}
 
-                {categoriaLote && !modoManual && proyecto !== "OTRO" && <div className="bg-[#1E293B]/60 border border-cyan-900/50 p-3 rounded-xl flex items-center gap-2 mt-2"><Tag className="w-4 h-4 text-cyan-400" /><span className="text-[10px] font-bold text-slate-300 uppercase">Categoría: <span className="text-white">{categoriaLote}</span></span></div>}
+                {lote && !modoManual && proyecto !== "OTRO" && (
+                  (() => {
+                    const status = getLoteStatus(categoriaLote || "Estándar");
+                    return (
+                      <div className={`mt-2 p-4 rounded-2xl border flex items-center gap-3 ${status.bg} ${status.border} shadow-lg relative overflow-hidden`}>
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-bl-full print-hide"></div>
+                        <div className={`p-2.5 rounded-xl bg-black/20 ${status.color} border ${status.border} relative z-10`}>{status.icon}</div>
+                        <div className="relative z-10">
+                          <div className={`text-[10px] font-black uppercase tracking-wider ${status.color} flex items-center gap-1.5`}>
+                            {status.text} <span className="text-slate-500 opacity-50">•</span> Categ: {categoriaLote || "Estándar"}
+                          </div>
+                          <div className="text-[11px] text-slate-300 font-medium mt-0.5 leading-tight">{status.desc}</div>
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
 
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-2.5"><label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5"><Map className="w-4 h-4 text-emerald-400" /> Superficie (m²)</label><input type="number" required value={superficie} onChange={e => setSuperficie(e.target.value)} readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-4 font-extrabold text-white text-lg ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 cursor-default' : ''}`} /></div>
@@ -604,7 +656,14 @@ export default function App() {
                       <div>
                         <div className="text-[9px] font-bold text-slate-500 uppercase">Proyecto</div>
                         <div className="text-white font-black text-lg uppercase">{resultado.proyecto}</div>
-                        {resultado.categoria !== "Estándar" && <div className="text-cyan-400 font-bold text-[9px] uppercase mt-0.5">{resultado.categoria}</div>}
+                        
+                        {/* Insignia VIP/Escasez en Resultados */}
+                        <div className="flex items-center gap-1.5 mt-1">
+                           {(() => {
+                              const status = getLoteStatus(resultado.categoria);
+                              return <span className={`${status.color} bg-black/20 px-2 py-0.5 rounded border ${status.border} font-bold text-[9px] uppercase flex items-center gap-1`}><span className="print-hide">{status.icon}</span> {status.text} ({resultado.categoria})</span>
+                           })()}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -655,6 +714,68 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* --- NUEVA SECCIÓN: GRÁFICO DE PLUSVALÍA --- */}
+                  <div className="bg-[#121A2F] p-6 sm:p-8 rounded-[2rem] border border-emerald-900/30 mt-6 relative overflow-hidden print:border-slate-300 print:bg-white print:shadow-none print:mt-4">
+                      {/* Glow effect solo visible en la web */}
+                      <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl print:hidden"></div>
+
+                      <h3 className="text-sm font-extrabold text-emerald-400 uppercase flex items-center gap-2 mb-2 print:text-emerald-700">
+                          <BarChart3 className="w-5 h-5" /> Proyección de Plusvalía (12% Anual est.)
+                      </h3>
+                      <p className="text-slate-400 text-xs mb-6 max-w-xl print:text-slate-600">
+                          La tierra es un activo que no se deprecia. Esta es la proyección de cómo crecerá su capital desde hoy hasta finalizar su plan de pagos, considerando la valorización histórica de la zona.
+                      </p>
+
+                      {/* Contenedor de las barras */}
+                      <div className="flex items-end justify-between gap-2 h-40 sm:h-48 mt-4 mx-2">
+                          {resultado.proyeccionPlusvalia.map((item, idx) => (
+                              <div key={idx} className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                                  {/* Tooltip Hover (Visible al pasar el mouse en web) */}
+                                  <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded transition-opacity whitespace-nowrap z-10 pointer-events-none print:hidden shadow-lg border border-slate-600">
+                                      ${item.valorFormat}
+                                  </div>
+                                  
+                                  {/* Tooltip Print (Visible solo al imprimir arriba de la barra) */}
+                                  <div className="hidden print:block text-[9px] font-bold text-slate-800 mb-1">
+                                      ${item.valorFormat}
+                                  </div>
+
+                                  {/* Barra Visual */}
+                                  <div
+                                      className={`w-full max-w-[45px] rounded-t-md transition-all duration-1000 ease-out relative flex items-end justify-center pb-2 
+                                        ${idx === 0 ? 'bg-slate-700 print:bg-slate-300' : 
+                                          idx === resultado.proyeccionPlusvalia.length - 1 ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.2)] print:bg-emerald-500 print:shadow-none' : 
+                                          'bg-cyan-900/40 group-hover:bg-cyan-700/60 print:bg-slate-200'}`}
+                                      style={{ height: `${item.alturaPorcentaje}%` }}
+                                  >
+                                      {/* Punto brillante arriba de la última barra */}
+                                      {idx === resultado.proyeccionPlusvalia.length - 1 && (
+                                          <div className="absolute -top-1 w-full h-1 bg-white/50 rounded-t-md print:hidden"></div>
+                                      )}
+                                  </div>
+
+                                  {/* Etiqueta del Eje X (Año) */}
+                                  <div className="text-[10px] font-black text-slate-500 mt-3 uppercase tracking-wider print:text-slate-600">
+                                      {item.etiqueta}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+
+                      {/* Resumen Final debajo de la gráfica */}
+                      <div className="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center print:border-slate-200">
+                           <div>
+                               <div className="text-[10px] uppercase font-extrabold text-slate-500 print:text-slate-600">Valor Actual de la Tierra</div>
+                               <div className="text-sm font-black text-slate-300 print:text-slate-800">${resultado.valorOriginal}</div>
+                           </div>
+                           <div className="text-right">
+                               <div className="text-[10px] uppercase font-extrabold text-emerald-500 print:text-emerald-600">Patrimonio Proyectado (Año {resultado.plazo})</div>
+                               <div className="text-xl font-black text-emerald-400 print:text-emerald-600">+ ${resultado.proyeccionPlusvalia[resultado.proyeccionPlusvalia.length-1].valorFormat}</div>
+                           </div>
+                      </div>
+                  </div>
+                  {/* --- FIN SECCIÓN PLUSVALÍA --- */}
+
                   {/* ACCIONES Y BOTONES (SE OCULTAN AL IMPRIMIR) */}
                   <div className="flex flex-col gap-3 mt-8 print-hide">
                     <div className="grid grid-cols-2 gap-3">
@@ -673,7 +794,7 @@ export default function App() {
                     
                     <button onClick={()=>setShowTablaPagos(!showTablaPagos)} className="w-full bg-[#1E293B] border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 text-xs uppercase"><TableProperties className="w-4 h-4"/> Ver Plan de Pagos Completo</button>
                     
-                    {/* EL NUEVO BOTÓN ESTRELLA: GENERAR PDF */}
+                    {/* EL BOTÓN ESTRELLA: GENERAR PDF */}
                     <button onClick={generarPDF} className="w-full bg-gradient-to-r from-slate-700 to-slate-800 border border-slate-600 text-white font-black py-4 rounded-xl flex items-center justify-center gap-2 text-xs uppercase mt-2 shadow-lg hover:scale-[1.01] transition-transform">
                       <Printer className="w-5 h-5"/> Generar PDF Oficial
                     </button>
@@ -682,18 +803,18 @@ export default function App() {
                   {/* TABLA DE PLAN DE PAGOS (SIEMPRE VISIBLE AL IMPRIMIR) */}
                   {(showTablaPagos || typeof window !== 'undefined') && (
                     <div className={`mt-4 rounded-2xl border border-slate-700 overflow-hidden ${!showTablaPagos ? 'hidden print:block' : ''}`}>
-                      <div className="bg-[#1E293B] p-4 border-b border-slate-700"><h4 className="font-bold text-slate-300 text-xs uppercase">Tabla de Amortización</h4></div>
+                      <div className="bg-[#1E293B] p-4 border-b border-slate-700 print:bg-slate-100 print:border-slate-300"><h4 className="font-bold text-slate-300 text-xs uppercase print:text-slate-800">Tabla de Amortización</h4></div>
                       <table className="w-full text-xs text-left">
-                        <thead className="bg-[#0F172A] text-slate-500 uppercase font-bold">
-                          <tr><th className="px-4 py-3 text-center">Año</th><th className="px-4 py-3 text-center">Inicial ($us)</th><th className="px-4 py-3 text-center">Mensual ($us)</th><th className="px-4 py-3 text-center text-cyan-500">Mensual (Bs)</th></tr>
+                        <thead className="bg-[#0F172A] text-slate-500 uppercase font-bold print:bg-slate-200 print:text-slate-700">
+                          <tr><th className="px-4 py-3 text-center">Año</th><th className="px-4 py-3 text-center">Inicial ($us)</th><th className="px-4 py-3 text-center">Mensual ($us)</th><th className="px-4 py-3 text-center text-cyan-500 print:text-slate-700">Mensual (Bs)</th></tr>
                         </thead>
                         <tbody>
                           {resultado.tablaPlazos.map((row, i) => (
-                            <tr key={i} className={`border-b border-slate-800/50 ${row.años === resultado.plazo ? 'bg-cyan-900/10 border-l-2 border-l-cyan-500' : ''}`}>
-                              <td className="px-4 py-3 font-bold text-slate-300 text-center">{row.años}</td>
-                              <td className="px-4 py-3 text-center text-slate-500">${row.cuota_inicial}</td>
-                              <td className="px-4 py-3 font-black text-white text-center">${row.cuota_mensual}</td>
-                              <td className="px-4 py-3 font-black text-cyan-400 text-center">Bs. {row.cuota_mensual_bs}</td>
+                            <tr key={i} className={`border-b border-slate-800/50 print:border-slate-300 ${row.años === resultado.plazo ? 'bg-cyan-900/10 border-l-2 border-l-cyan-500 print:bg-slate-100 print:border-l-slate-800' : ''}`}>
+                              <td className="px-4 py-3 font-bold text-slate-300 text-center print:text-slate-800">{row.años}</td>
+                              <td className="px-4 py-3 text-center text-slate-500 print:text-slate-600">${row.cuota_inicial}</td>
+                              <td className="px-4 py-3 font-black text-white text-center print:text-slate-900">${row.cuota_mensual}</td>
+                              <td className="px-4 py-3 font-black text-cyan-400 text-center print:text-slate-700">Bs. {row.cuota_mensual_bs}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -704,7 +825,7 @@ export default function App() {
                   {/* PIE DE PÁGINA SOLO PARA PDF */}
                   <div className="hidden print:block mt-10 text-center text-xs text-slate-500 border-t border-slate-300 pt-4">
                     <p>Este documento es una propuesta de inversión y no constituye un contrato legal vinculante.</p>
-                    <p>Los precios y descuentos están sujetos a modificaciones sin previo aviso.</p>
+                    <p>Los precios, descuentos y proyecciones de plusvalía están sujetos a modificaciones sin previo aviso.</p>
                   </div>
 
                 </div>
