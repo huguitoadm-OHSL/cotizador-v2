@@ -889,6 +889,67 @@ export default function App() {
             </div>
           </>
         )}
+
+        {/* --- MODAL DE COMPARATIVA A vs B --- */}
+        {showComparativa && escenarioA && resultado && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print-hide">
+            <div className="bg-[#0F172A] border border-slate-700 w-full max-w-4xl rounded-[2rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]">
+              {/* Cabecera del Modal */}
+              <div className="p-4 sm:p-5 border-b border-slate-700 flex justify-between items-center bg-[#1E293B]/50">
+                <h3 className="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2"><Scale className="w-5 h-5 text-cyan-400"/> Comparativa de Inversión</h3>
+                <button onClick={() => setShowComparativa(false)} className="p-2 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 rounded-xl transition-colors"><X className="w-5 h-5"/></button>
+              </div>
+              {/* Cuerpo del Modal */}
+              <div className="p-4 sm:p-6 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Escenario A */}
+                  <div className="bg-[#1E293B]/40 border border-slate-700 p-5 rounded-2xl flex flex-col h-full">
+                    <div className="text-center mb-4 pb-4 border-b border-slate-700">
+                      <div className="bg-slate-800 text-slate-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase inline-block mb-2">Escenario A (Guardado)</div>
+                      <div className="text-2xl font-black text-white">{escenarioA.plazo} Años</div>
+                      <div className="text-sm text-cyan-400 font-bold">Inicial: {escenarioA.pctInicial}% (${escenarioA.inicialRaw.toFixed(2)})</div>
+                    </div>
+                    <div className="space-y-3 text-sm flex-1">
+                      <div className="flex justify-between"><span className="text-slate-400">Superficie:</span> <span className="font-bold text-white">{escenarioA.superficie} m²</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Total a Financiar:</span> <span className="font-bold text-white">${escenarioA.valorCreditoRaw.toFixed(2)}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Ahorro Crédito:</span> <span className="font-bold text-emerald-400">{escenarioA.ahorroCredito}</span></div>
+                    </div>
+                    <div className="flex justify-between p-3 bg-[#0B1121] rounded-xl border border-slate-700 mt-4 items-center">
+                      <span className="text-cyan-400 font-bold uppercase text-[10px] leading-tight">Cuota<br/>Mensual</span> 
+                      <div className="text-right">
+                         <span className="font-black text-xl text-white block">${escenarioA.mensualRaw.toFixed(2)}</span>
+                         <span className="text-[10px] text-slate-500 font-bold">Bs. {escenarioA.mensualBsRaw.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Escenario B (Actual) */}
+                  <div className="bg-cyan-900/10 border border-cyan-500/30 p-5 rounded-2xl relative overflow-hidden flex flex-col h-full shadow-[0_0_20px_rgba(6,182,212,0.1)]">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-bl-full"></div>
+                    <div className="text-center mb-4 pb-4 border-b border-cyan-900/50 relative z-10">
+                      <div className="bg-cyan-500 text-slate-900 text-[10px] font-bold px-3 py-1 rounded-full uppercase inline-block mb-2">Escenario B (Actual)</div>
+                      <div className="text-2xl font-black text-white">{resultado.plazo} Años</div>
+                      <div className="text-sm text-cyan-400 font-bold">Inicial: {resultado.pctInicial}% (${resultado.inicialRaw.toFixed(2)})</div>
+                    </div>
+                    <div className="space-y-3 text-sm relative z-10 flex-1">
+                      <div className="flex justify-between"><span className="text-slate-400">Superficie:</span> <span className="font-bold text-white">{resultado.superficie} m²</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Total a Financiar:</span> <span className="font-bold text-white">${resultado.valorCreditoRaw.toFixed(2)}</span></div>
+                      <div className="flex justify-between"><span className="text-slate-400">Ahorro Crédito:</span> <span className="font-bold text-emerald-400">{resultado.ahorroCredito}</span></div>
+                    </div>
+                    <div className="flex justify-between p-3 bg-cyan-950/50 rounded-xl border border-cyan-800 mt-4 items-center relative z-10">
+                      <span className="text-cyan-400 font-bold uppercase text-[10px] leading-tight">Cuota<br/>Mensual</span> 
+                      <div className="text-right">
+                         <span className="font-black text-xl text-white block">${resultado.mensualRaw.toFixed(2)}</span>
+                         <span className="text-[10px] text-slate-500 font-bold">Bs. {resultado.mensualBsRaw.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
       )}
     </div>
