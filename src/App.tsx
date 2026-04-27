@@ -367,8 +367,6 @@ export default function App() {
     setHistorialCRM(nuevoHistorial);
     localStorage.setItem('celina_crm_data', JSON.stringify(nuevoHistorial));
     setIsSaved(true);
-    
-    // Aquí a futuro se conecta con un Fetch POST a Google Sheets o un Webhook.
   };
 
   const generarMensajeParte1 = () => {
@@ -495,13 +493,13 @@ export default function App() {
       ) : (
       <div className="max-w-[1200px] mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* BARRA DE NAVEGACIÓN GERENCIAL (Oculta para asesores normales) */}
+        {/* BARRA DE NAVEGACIÓN GERENCIAL CON DISEÑO RESPONSIVE (ARREGLADO PARA MOBILE) */}
         {userRole === "gerente" && (
-          <nav className="bg-[#1E293B]/80 backdrop-blur-lg border border-cyan-900/50 rounded-2xl p-2 flex justify-center gap-2 mb-8 print-hide w-max mx-auto shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-            <button onClick={() => setCurrentView("simulador")} className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${currentView === "simulador" ? "bg-cyan-500 text-slate-900 shadow-lg" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}>
+          <nav className="bg-[#1E293B]/80 backdrop-blur-lg border border-cyan-900/50 rounded-2xl p-2 flex flex-col sm:flex-row justify-center gap-2 mb-8 print-hide w-full sm:w-max mx-auto shadow-[0_0_20px_rgba(6,182,212,0.15)]">
+            <button onClick={() => setCurrentView("simulador")} className={`w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${currentView === "simulador" ? "bg-cyan-500 text-slate-900 shadow-lg" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}>
                <Calculator className="w-4 h-4" /> Simulador de Ventas
             </button>
-            <button onClick={() => setCurrentView("dashboard")} className={`px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${currentView === "dashboard" ? "bg-emerald-500 text-slate-900 shadow-lg" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}>
+            <button onClick={() => setCurrentView("dashboard")} className={`w-full sm:w-auto px-4 sm:px-6 py-3 sm:py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${currentView === "dashboard" ? "bg-emerald-500 text-slate-900 shadow-lg" : "text-slate-400 hover:text-white hover:bg-slate-800"}`}>
                <LayoutDashboard className="w-4 h-4" /> Panel CRM Gerencial
             </button>
           </nav>
@@ -512,34 +510,34 @@ export default function App() {
           <div className="animate-in fade-in zoom-in-95 duration-500">
              <div className="flex flex-col items-center mb-10">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center mb-3 shadow-[0_0_30px_rgba(52,211,153,0.3)]"><Briefcase className="w-7 h-7 text-white" /></div>
-                <h1 className="text-4xl font-extrabold text-white">Panel de Control <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">CRM</span></h1>
-                <p className="text-slate-400 text-sm font-medium tracking-wide mt-1">Gestión Regional Montero</p>
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-white text-center">Panel de Control <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">CRM</span></h1>
+                <p className="text-slate-400 text-sm font-medium tracking-wide mt-1 text-center">Gestión Regional Montero</p>
              </div>
 
              {/* KPIs (Indicadores Clave) */}
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-slate-700/50 p-6 rounded-[2rem] shadow-xl">
-                    <div className="flex items-center gap-3 mb-2 text-cyan-400"><FolderOpen className="w-5 h-5"/> <span className="text-xs font-bold uppercase tracking-wider">Cotizaciones Generadas</span></div>
+                <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-slate-700/50 p-6 rounded-[2rem] shadow-xl text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-3 mb-2 text-cyan-400"><FolderOpen className="w-5 h-5"/> <span className="text-xs font-bold uppercase tracking-wider">Cotizaciones Generadas</span></div>
                     <div className="text-4xl font-black text-white">{historialCRM.length}</div>
                 </div>
-                <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-emerald-900/50 p-6 rounded-[2rem] shadow-[0_0_30px_rgba(52,211,153,0.05)]">
-                    <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign className="w-5 h-5"/> <span className="text-xs font-bold uppercase tracking-wider">Volumen Financiado</span></div>
-                    <div className="text-4xl font-black text-white">$ {formatMoney(historialCRM.reduce((acc, curr) => acc + (curr.montoFinanciado || 0), 0))}</div>
+                <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-emerald-900/50 p-6 rounded-[2rem] shadow-[0_0_30px_rgba(52,211,153,0.05)] text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-3 mb-2 text-emerald-400"><DollarSign className="w-5 h-5"/> <span className="text-xs font-bold uppercase tracking-wider">Volumen Financiado</span></div>
+                    <div className="text-3xl sm:text-4xl font-black text-white truncate">$ {formatMoney(historialCRM.reduce((acc, curr) => acc + (curr.montoFinanciado || 0), 0))}</div>
                 </div>
-                <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-slate-700/50 p-6 rounded-[2rem] shadow-xl">
-                    <div className="flex items-center gap-3 mb-2 text-purple-400"><Users className="w-5 h-5"/> <span className="text-xs font-bold uppercase tracking-wider">Asesores Activos</span></div>
+                <div className="bg-[#1E293B]/60 backdrop-blur-xl border border-slate-700/50 p-6 rounded-[2rem] shadow-xl text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-3 mb-2 text-purple-400"><Users className="w-5 h-5"/> <span className="text-xs font-bold uppercase tracking-wider">Asesores Activos</span></div>
                     <div className="text-4xl font-black text-white">{[...new Set(historialCRM.map(h => h.asesor))].length}</div>
                 </div>
              </div>
 
              {/* Tabla de Base de Datos */}
              <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-slate-700 rounded-[2rem] overflow-hidden">
-                <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-[#1E293B]/30">
+                <div className="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3 bg-[#1E293B]/30">
                    <h3 className="text-lg font-bold text-white flex items-center gap-2"><Database className="w-5 h-5 text-cyan-500"/> Registro de Actividad</h3>
                    <span className="bg-cyan-900/40 text-cyan-400 text-[10px] px-3 py-1 rounded-full font-bold uppercase border border-cyan-500/30">Datos en Tiempo Real</span>
                 </div>
                 <div className="overflow-x-auto">
-                   <table className="w-full text-sm text-left text-slate-300">
+                   <table className="w-full text-sm text-left text-slate-300 min-w-[600px]">
                       <thead className="text-xs text-slate-500 uppercase bg-[#0B1121]">
                          <tr>
                             <th className="px-6 py-4 font-bold">Fecha / Hora</th>
@@ -556,11 +554,11 @@ export default function App() {
                          ) : (
                            historialCRM.map((row) => (
                              <tr key={row.id} className="border-b border-slate-800/50 hover:bg-[#1E293B]/50 transition-colors">
-                                <td className="px-6 py-4">{row.fecha}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{row.fecha}</td>
                                 <td className="px-6 py-4 font-bold text-white">{row.cliente || "Sin nombre"}</td>
                                 <td className="px-6 py-4"><span className="bg-slate-800 px-2 py-1 rounded text-xs">{row.asesor}</span></td>
-                                <td className="px-6 py-4 text-cyan-400 font-bold">{row.proyecto}</td>
-                                <td className="px-6 py-4 text-xs">{row.ubicacion}</td>
+                                <td className="px-6 py-4 text-cyan-400 font-bold whitespace-nowrap">{row.proyecto}</td>
+                                <td className="px-6 py-4 text-xs whitespace-nowrap">{row.ubicacion}</td>
                                 <td className="px-6 py-4 text-right font-black text-emerald-400">${formatMoney(row.montoFinanciado)}</td>
                              </tr>
                            ))
