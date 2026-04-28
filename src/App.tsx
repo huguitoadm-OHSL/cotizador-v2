@@ -101,7 +101,7 @@ export default function App() {
             
             let cleanProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "").toUpperCase().trim();
             
-            // --- TRADUCTOR AUTOMÁTICO EXCEL -> MENÚ APP ---
+            // --- TRADUCTOR AUTOMÁTICO EXCEL -> MENÚ APP (COMPLETAMENTE ACTUALIZADO) ---
             if (cleanProyecto === "CELINA III") cleanProyecto = "CELINA 3";
             else if (cleanProyecto === "CELINA IV") cleanProyecto = "CELINA 4";
             else if (cleanProyecto === "CELINA V") cleanProyecto = "CELINA 5";
@@ -113,9 +113,10 @@ export default function App() {
             else if (cleanProyecto === "CELINA - RANCHO NUEVO" || cleanProyecto === "CELINA RANCHO NUEVO") cleanProyecto = "RANCHO NUEVO";
             else if (cleanProyecto === "CELINA CLARA CHUCHIO") cleanProyecto = "CLARA CHUCHIO";
             else if (cleanProyecto === "CELINA URUBO DEL NORTE" || cleanProyecto === "CELINA URUBÓ DEL NORTE") cleanProyecto = "URUBÓ NORTE";
-            else if (cleanProyecto === "CELINA PAILON") cleanProyecto = "CELINA PAILÓN";
+            else if (cleanProyecto === "CELINA PAILON" || cleanProyecto === "CELINA PAILÓN") cleanProyecto = "CELINA PAILÓN";
             else if (cleanProyecto === "PARAISO DEL NORTE") cleanProyecto = "PARAÍSO DEL NORTE";
-            // ----------------------------------------------
+            // Las demás (CAÑAVERAL, LOS JARDINES, EL RENACER, EL ENCANTO, SANTA ROSA, ETC) ya están idénticas en Excel y Menú
+            // -------------------------------------------------------------------------
             
             const cleanNumber = (val) => {
                 if (val === undefined || val === null || val === "") return "";
