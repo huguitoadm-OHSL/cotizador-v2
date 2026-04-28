@@ -29,7 +29,7 @@ const ESTRUCTURA_REGIONES = {
   "SANTA CRUZ": [
     "URUBÓ NORTE", "ROSA RODALI", "CELINA PAILÓN", "EL ENCANTO", "EL ENCANTO FASE 2", 
     "SANTA ROSA - FASE 1", "SANTA ROSA - FASE 2", "SANTA ROSA - FASE 3", 
-    "TAMARINDO", "JARDINES DEL BOSQUE", "EL PORVENIR", "EL PORVENIR FASE 2", "PARAÍSO DEL NORTE", "OTRO..."
+    "TAMARINDO", "JARDINES DEL BOSQUE", "EL PORVENIR", "EL PORVENIR FASE 2", "OTRO..."
   ],
   "MONTERO": [
     "MUYURINA", "LOS JARDINES", "EL RENACER", "CELINA 3", "CELINA 4", "CELINA 5", 
@@ -39,6 +39,48 @@ const ESTRUCTURA_REGIONES = {
     "CELINA 7 FASE 3", "CELINA 8", "CLARA CHUCHIO", "SAN JORGE", 
     "CELINA VII FASE 1", "CELINA VII FASE 2", "PRADERAS DEL NORTE", "OTRO..."
   ]
+};
+
+// --- MOTOR DE DESCUENTOS MAXIMOS (ABRIL 2026) ---
+const getDiscountLimits = (proj, tier) => {
+  let limits = { contPct: 0, credPct: 0, contM2: 0, credM2: 0, showPct: false, showM2: false };
+  
+  if (proj === "OTRO...") {
+      return { contPct: 100, credPct: 100, contM2: 500, credM2: 500, showPct: true, showM2: true };
+  }
+
+  const isM2_3 = ["LOS JARDINES", "SANTA FE", "EL RENACER", "RANCHO NUEVO", "SANTA ROSA - FASE 1", "SANTA ROSA - FASE 2", "SANTA ROSA - FASE 3", "EL ENCANTO FASE 2", "SAN JORGE", "EL PORVENIR", "EL PORVENIR FASE 2"].includes(proj);
+  const isM2_4 = ["CAÑAVERAL", "EL ENCANTO", "CELINA 7 FASE 3"].includes(proj);
+  const isPct30 = ["MUYURINA", "CELINA VII FASE 1", "CELINA VII FASE 2", "CELINA X", "TAMARINDO", "CLARA CHUCHIO", "URUBÓ NORTE", "CELINA 8"].includes(proj);
+  const isPct32 = ["CELINA 3", "CELINA 4", "CELINA 5", "CELINA PAILÓN", "VILLA BELLA VIVIENDAS"].includes(proj);
+  const isRosa = ["ROSA RODALI"].includes(proj);
+  const isPraderas = ["PRADERAS DEL NORTE"].includes(proj);
+  const isJardinesBosque = ["JARDINES DEL BOSQUE"].includes(proj);
+
+  if (isM2_3) {
+      limits.contM2 = 3; limits.credM2 = tier === 2 ? 2 : (tier === 1 ? 1 : 0);
+      limits.showM2 = true;
+  } else if (isM2_4) {
+      limits.contM2 = 4; limits.credM2 = tier === 2 ? 2 : (tier === 1 ? 1 : 0);
+      limits.showM2 = true;
+  } else if (isPct30) {
+      limits.contPct = 30; limits.credPct = tier === 2 ? 23 : (tier === 1 ? 20 : 0);
+      limits.showPct = true;
+  } else if (isPct32) {
+      limits.contPct = 32; limits.credPct = tier === 2 ? 28 : (tier === 1 ? 25 : 0);
+      limits.showPct = true;
+  } else if (isRosa) {
+      limits.contPct = 15; limits.credPct = tier > 0 ? 10 : 0;
+      limits.showPct = true;
+  } else if (isPraderas) {
+      limits.contPct = 20; limits.credPct = tier > 0 ? 15 : 0;
+      limits.showPct = true;
+  } else if (isJardinesBosque) {
+      limits.contM2 = 7; limits.credM2 = tier > 0 ? 5 : 0;
+      limits.showM2 = true;
+  }
+
+  return limits;
 };
 
 export default function App() {
@@ -51,11 +93,9 @@ export default function App() {
   const handleLogin = (e) => {
     e.preventDefault();
     if (passwordInput === "MVENTAS26") {
-      setUserRole("asesor");
-      setLoginError("");
+      setUserRole("asesor"); setLoginError("");
     } else if (passwordInput === "GERENCIA26") {
-      setUserRole("gerente");
-      setLoginError("");
+      setUserRole("gerente"); setLoginError("");
     } else {
       setLoginError("Contraseña incorrecta. Intente nuevamente.");
     }
@@ -101,7 +141,7 @@ export default function App() {
             
             let cleanProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "").toUpperCase().trim();
             
-            // --- TRADUCTOR AUTOMÁTICO EXCEL -> MENÚ APP (COMPLETAMENTE ACTUALIZADO) ---
+            // --- TRADUCTOR AUTOMÁTICO EXCEL -> MENÚ APP ---
             if (cleanProyecto === "CELINA III") cleanProyecto = "CELINA 3";
             else if (cleanProyecto === "CELINA IV") cleanProyecto = "CELINA 4";
             else if (cleanProyecto === "CELINA V") cleanProyecto = "CELINA 5";
@@ -109,14 +149,16 @@ export default function App() {
             else if (cleanProyecto === "CELINA VIII") cleanProyecto = "CELINA 8";
             else if (cleanProyecto === "CELINA VII FASE 3") cleanProyecto = "CELINA 7 FASE 3";
             else if (cleanProyecto === "CELINA MUYURINA") cleanProyecto = "MUYURINA";
-            else if (cleanProyecto === "CELINA SANTA FE") cleanProyecto = "SANTA FE";
-            else if (cleanProyecto === "CELINA - RANCHO NUEVO" || cleanProyecto === "CELINA RANCHO NUEVO") cleanProyecto = "RANCHO NUEVO";
-            else if (cleanProyecto === "CELINA CLARA CHUCHIO") cleanProyecto = "CLARA CHUCHIO";
-            else if (cleanProyecto === "CELINA URUBO DEL NORTE" || cleanProyecto === "CELINA URUBÓ DEL NORTE") cleanProyecto = "URUBÓ NORTE";
-            else if (cleanProyecto === "CELINA PAILON" || cleanProyecto === "CELINA PAILÓN") cleanProyecto = "CELINA PAILÓN";
+            else if (cleanProyecto === "CELINA SANTA FE" || cleanProyecto === "SANTA FE") cleanProyecto = "SANTA FE";
+            else if (cleanProyecto === "CELINA - RANCHO NUEVO" || cleanProyecto === "CELINA RANCHO NUEVO" || cleanProyecto === "RANCHO NUEVO") cleanProyecto = "RANCHO NUEVO";
+            else if (cleanProyecto === "CELINA CLARA CHUCHIO" || cleanProyecto === "CLARA CHUCHIO") cleanProyecto = "CLARA CHUCHIO";
+            else if (cleanProyecto === "CELINA URUBO DEL NORTE" || cleanProyecto === "CELINA URUBÓ DEL NORTE" || cleanProyecto === "URUBÓ NORTE") cleanProyecto = "URUBÓ NORTE";
+            else if (cleanProyecto === "CELINA PAILON" || cleanProyecto === "CELINA PAILÓN" || cleanProyecto === "PAILON") cleanProyecto = "CELINA PAILÓN";
+            else if (cleanProyecto.includes("ENCANTO FASE 2")) cleanProyecto = "EL ENCANTO FASE 2";
+            else if (cleanProyecto.includes("ENCANTO")) cleanProyecto = "EL ENCANTO";
+            else if (cleanProyecto === "CELINA VILLA BELLA" || cleanProyecto === "VILLA BELLA") cleanProyecto = "VILLA BELLA VIVIENDAS";
             else if (cleanProyecto === "PARAISO DEL NORTE") cleanProyecto = "PARAÍSO DEL NORTE";
-            // Las demás (CAÑAVERAL, LOS JARDINES, EL RENACER, EL ENCANTO, SANTA ROSA, ETC) ya están idénticas en Excel y Menú
-            // -------------------------------------------------------------------------
+            // ----------------------------------------------
             
             const cleanNumber = (val) => {
                 if (val === undefined || val === null || val === "") return "";
@@ -166,11 +208,15 @@ export default function App() {
   const [superficie, setSuperficie] = useState("");
   const [precio, setPrecio] = useState("");
   
-  const [descuentoCredito, setDescuentoCredito] = useState(20);
-  const [descuentoContado, setDescuentoContado] = useState(30);
-  const [descuentoM2, setDescuentoM2] = useState(0);
-  const [descuentoInicial, setDescuentoInicial] = useState(0);
-  const [descuentoContadoM2, setDescuentoContadoM2] = useState(0); 
+  // ESTADOS DE LÍMITES Y DESCUENTOS EDITABLES
+  const [maxDiscounts, setMaxDiscounts] = useState({ contPct: 0, credPct: 0, contM2: 0, credM2: 0, showPct: false, showM2: false });
+  const [descuentoCredito, setDescuentoCredito] = useState("");
+  const [descuentoContado, setDescuentoContado] = useState("");
+  const [descuentoM2, setDescuentoM2] = useState("");
+  const [descuentoContadoM2, setDescuentoContadoM2] = useState(""); 
+  
+  const prevProyectoRef = useRef(proyecto);
+  const prevTierRef = useRef(-1);
 
   const [aplicarDescContadoPct, setAplicarDescContadoPct] = useState(true);
   const [aplicarDescCreditoPct, setAplicarDescCreditoPct] = useState(true);
@@ -222,23 +268,8 @@ export default function App() {
     setInicialPorcentaje(""); setInicialMonto(""); setAños("");
     setResultado(null); setProyectoPersonalizado(""); setEscenarioA(null); setShowTablaPagos(false); setIsSaved(false);
     setAplicarDescContadoPct(true); setAplicarDescCreditoPct(true); setAplicarDescM2(true); setAplicarDescContadoM2(true); setAplicarBonoInicialOtro(true);
-
-    const isM2_3 = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE"].includes(proyecto);
-    const isM2_4 = ["CAÑAVERAL"].includes(proyecto);
-    const isOtro = proyecto === "OTRO...";
-
-    if (isM2_3) {
-      setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(3);
-    } else if (isM2_4) {
-      setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(4);
-    } else if (isOtro) {
-      setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0); setModoManual(true);
-    } else {
-      // Proyectos estándar
-      setDescuentoCredito(20); setDescuentoContado(30); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0);
-    }
     
-    if (!isOtro) setModoManual(lotesDB.length === 0);
+    if (proyecto !== "OTRO...") setModoManual(lotesDB.length === 0);
   }, [proyecto, lotesDB.length]);
 
   const uvsDisponibles = [...new Set(lotesDB.filter(l => l.proyecto === proyecto).map(l => l.uv))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
@@ -257,6 +288,7 @@ export default function App() {
     }
   };
 
+  // --- EFECTO MAESTRO PARA CALCULAR LÍMITES Y ACTUALIZAR AUTO ---
   useEffect(() => {
     let pct = 0;
     if (modoInicial === 'porcentaje') {
@@ -264,24 +296,38 @@ export default function App() {
     } else {
       const sup = Number(superficie); const prec = Number(precio); const monto = Number(inicialMonto);
       if (sup > 0 && prec > 0 && monto > 0) {
-        const base = (sup * prec) - (sup * (aplicarDescM2 ? Number(descuentoM2) : 0));
-        const finalBase = base - (base * (aplicarDescCreditoPct ? (Number(descuentoCredito) / 100) : 0));
+        const basePre = (sup * prec) - (sup * (aplicarDescM2 ? Number(descuentoM2) : 0));
+        const finalBase = basePre - (basePre * (aplicarDescCreditoPct ? (Number(descuentoCredito) / 100) : 0));
         if (finalBase > 0) pct = (monto / finalBase) * 100;
       }
     }
     
-    if (pct > 0) {
-      const isM2 = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE", "CAÑAVERAL"].includes(proyecto);
-      const isOtro = proyecto === "OTRO...";
+    let currentTier = 0;
+    if (pct >= 5) currentTier = 2;
+    else if (pct >= 1.5) currentTier = 1;
 
-      if (isM2) {
-        if (pct >= 5) setDescuentoM2(2); else setDescuentoM2(1);
-      } else if (!isOtro) {
-        // Proyectos estándar (ej. MUYURINA, URUBÓ NORTE)
-        if (pct >= 4.99) setDescuentoCredito(23); else setDescuentoCredito(20);
-      }
+    const limits = getDiscountLimits(proyecto, currentTier);
+    setMaxDiscounts(limits);
+
+    // Si cambia el proyecto o el rango de Inicial, autocompletamos con el MÁXIMO
+    if (proyecto !== prevProyectoRef.current || currentTier !== prevTierRef.current) {
+        setDescuentoContado(limits.contPct);
+        setDescuentoCredito(limits.credPct);
+        setDescuentoContadoM2(limits.contM2);
+        setDescuentoM2(limits.credM2);
+        
+        prevProyectoRef.current = proyecto;
+        prevTierRef.current = currentTier;
     }
-  }, [modoInicial, inicialPorcentaje, inicialMonto, superficie, precio, proyecto, descuentoM2, descuentoCredito, aplicarDescM2, aplicarDescCreditoPct]);
+  }, [modoInicial, inicialPorcentaje, inicialMonto, superficie, precio, proyecto, aplicarDescM2, aplicarDescCreditoPct]);
+
+  // Validador manual de inputs (Para no pasarse del límite)
+  const handleDiscountChange = (valStr, maxLimit, setterFunc) => {
+      if (valStr === "") { setterFunc(""); return; }
+      let val = Number(valStr);
+      if (proyecto !== "OTRO..." && val > maxLimit) val = maxLimit;
+      setterFunc(val);
+  };
 
   const formatMoney = (amount) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
@@ -311,7 +357,8 @@ export default function App() {
     }
 
     let descIniVal = 0;
-    if (proyecto === "OTRO..." && aplicarBonoInicialOtro) descIniVal = Math.min(Number(descuentoInicial), 500);
+    // Solo aplica bono si es OTRO
+    if (proyecto === "OTRO..." && aplicarBonoInicialOtro) descIniVal = 0; 
 
     const monto_descuento_total_credito = monto_descuento_m2 + monto_desc_credito_pct + descIniVal;
     const valor_credito = valor_original - monto_descuento_total_credito;
@@ -319,9 +366,8 @@ export default function App() {
     let monto_desc_contado_m2 = sup * descContadoM2Val;
     let monto_descuento_total_contado = 0;
     
-    const isM2 = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "CAÑAVERAL"].includes(proyecto);
-    
-    if (isM2) {
+    if (maxDiscounts.showM2 && !maxDiscounts.showPct) {
+      // Regla exclusiva de proyectos M2
       monto_descuento_total_contado = monto_desc_contado_m2 + (valor_original * descContadoPct);
     } else {
       monto_descuento_total_contado = monto_descuento_m2 + (valor_post_desc_m2 * descContadoPct) + monto_desc_contado_m2;
@@ -390,18 +436,21 @@ export default function App() {
       valorOriginal: formatMoney(valor_original), valorOriginalBs: formatMoney(valor_original * TIPO_CAMBIO),
       valorContado: formatMoney(valor_contado), valorContadoBs: formatMoney(valor_contado * TIPO_CAMBIO),
       ahorroContado: formatMoney(monto_descuento_total_contado),
-      porcentajeContado: aplicarDescContadoPct ? descuentoContado : 0, descuentoContadoM2: aplicarDescContadoM2 ? descContadoM2Val : 0,
+      porcentajeContado: aplicarDescContadoPct ? Number(descuentoContado) : 0, 
+      descuentoContadoM2: aplicarDescContadoM2 ? Number(descuentoContadoM2) : 0,
       valorCreditoRaw: valor_credito, inicialRaw: cuota_inicial, mensualRaw: cuota_final, mensualBsRaw: cuota_final * TIPO_CAMBIO,
       saldoFinanciarRaw: saldo, totalPagadoCreditoRaw: total_pagado_credito,
       valorCreditoBs: formatMoney(valor_credito * TIPO_CAMBIO),
       ahorroCredito: formatMoney(monto_descuento_total_credito),
-      porcentajeCredito: aplicarDescCreditoPct ? descuentoCredito : 0, descuentoM2: aplicarDescM2 ? descM2Val : 0, descuentoInicial: descIniVal,
+      porcentajeCredito: aplicarDescCreditoPct ? Number(descuentoCredito) : 0, 
+      descuentoM2: aplicarDescM2 ? Number(descuentoM2) : 0, 
+      descuentoInicial: descIniVal,
       inicialBs: formatMoney(cuota_inicial * TIPO_CAMBIO), inicial: formatMoney(cuota_inicial),
       pagoAmortizacion: formatMoney(pago_puro), seguro: formatMoney(seguro), cbdi: formatMoney(cbdi),
       plazo: ans, meses: meses, pctInicial: parseFloat(pct_inicial_real.toFixed(2)),
       mensual: formatMoney(cuota_final), mensualBs: formatMoney(cuota_final * TIPO_CAMBIO), tablaPlazos: tablaPlazos,
       proyeccionPlusvalia: proyeccionPlusvalia,
-      regional: regional // Agregamos la región al resultado para el CRM
+      regional: regional 
     });
 
     setIsSaved(false);
@@ -443,9 +492,7 @@ export default function App() {
     
     let arrContado = [];
     if (resultado.porcentajeContado > 0) arrContado.push(`${resultado.porcentajeContado}%`);
-    let isProyectosEspeciales = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO", "SANTA FE"].includes(resultado.proyecto.toUpperCase());
-    let descM2ContadoVal = isProyectosEspeciales ? Number(resultado.descuentoContadoM2 || 0) : Number(resultado.descuentoM2 || 0) + Number(resultado.descuentoContadoM2 || 0);
-    if (descM2ContadoVal > 0) arrContado.push(`$${descM2ContadoVal}/m²`);
+    if (resultado.descuentoContadoM2 > 0) arrContado.push(`$${resultado.descuentoContadoM2}/m²`);
 
     let contadoStr = "";
     if (resultado.valorContadoRaw < resultado.valorOriginalRaw) {
@@ -488,12 +535,6 @@ export default function App() {
     setShowTablaPagos(true); 
     setTimeout(() => { window.print(); }, 300);
   };
-
-  const isM2ProjectCheck = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE", "CAÑAVERAL"].includes(proyecto);
-  const isOtroCheck = proyecto === "OTRO...";
-  const showDescPorcentaje = !isM2ProjectCheck || isOtroCheck;
-  const showDescM2 = isM2ProjectCheck || isOtroCheck;
-  const showDescContadoM2 = isM2ProjectCheck || isOtroCheck;
 
   if (loading) return <div className="min-h-screen bg-[#0B1121] flex items-center justify-center"><RefreshCw className="w-12 h-12 text-cyan-500 animate-spin mx-auto mb-4" /></div>;
 
@@ -659,7 +700,7 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                      {/* --- NUEVO CAMPO: REGIONAL --- */}
+                      {/* --- CAMPO: REGIONAL --- */}
                       <div className="space-y-2.5">
                         <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-500" /> Regional</label>
                         <select value={regional} onChange={handleRegionalChange} className="w-full glass-input rounded-2xl p-3 sm:p-4 font-bold text-white text-sm sm:text-base cursor-pointer border-cyan-700/50">
@@ -724,11 +765,37 @@ export default function App() {
                     </div>
 
                     <div className="bg-[#1E293B]/40 border border-slate-700 p-4 sm:p-5 rounded-[2rem] w-full">
-                      <div className="text-[10px] sm:text-xs font-extrabold text-emerald-400 uppercase flex items-center gap-2 mb-3 sm:mb-4"><Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Descuentos Especiales</div>
+                      <div className="text-[10px] sm:text-xs font-extrabold text-emerald-400 uppercase flex items-center gap-2 mb-3 sm:mb-4"><Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> Descuentos Permitidos</div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full">
-                        {showDescPorcentaje && <><div className="space-y-1.5 w-full"><label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400"><input type="checkbox" checked={aplicarDescContadoPct} onChange={e => setAplicarDescContadoPct(e.target.checked)} className="accent-emerald-500" /> A Contado (%)</label><input type="number" step="0.01" disabled={!aplicarDescContadoPct} value={descuentoContado} onChange={e=>setDescuentoContado(e.target.value)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" /></div><div className="space-y-1.5 w-full"><label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400"><input type="checkbox" checked={aplicarDescCreditoPct} onChange={e => setAplicarDescCreditoPct(e.target.checked)} className="accent-emerald-500" /> A Crédito (%)</label><input type="number" step="0.01" disabled={!aplicarDescCreditoPct} value={descuentoCredito} onChange={e=>setDescuentoCredito(e.target.value)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" /></div></>}
-                        {showDescM2 && <div className="space-y-1.5 w-full"><label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400"><input type="checkbox" checked={aplicarDescM2} onChange={e => setAplicarDescM2(e.target.checked)} className="accent-emerald-500" /> Crédito x m² ($us)</label><input type="number" step="0.01" disabled={!aplicarDescM2} value={descuentoM2} onChange={e=>setDescuentoM2(e.target.value)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" /></div>}
-                        {showDescContadoM2 && <div className="space-y-1.5 w-full"><label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400"><input type="checkbox" checked={aplicarDescContadoM2} onChange={e => setAplicarDescContadoM2(e.target.checked)} className="accent-emerald-500" /> Contado x m² ($us)</label><input type="number" step="0.01" disabled={!aplicarDescContadoM2} value={descuentoContadoM2} onChange={e=>setDescuentoContadoM2(e.target.value)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" /></div>}
+                        {maxDiscounts.showPct && <>
+                          <div className="space-y-1.5 w-full">
+                            <label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400">
+                               <input type="checkbox" checked={aplicarDescContadoPct} onChange={e => setAplicarDescContadoPct(e.target.checked)} className="accent-emerald-500" /> A Contado (%) {proyecto !== "OTRO..." && maxDiscounts.contPct > 0 && <span className="text-emerald-500/80 ml-1">(Máx {maxDiscounts.contPct}%)</span>}
+                            </label>
+                            <input type="number" step="0.01" disabled={!aplicarDescContadoPct} value={descuentoContado} onChange={e => handleDiscountChange(e.target.value, maxDiscounts.contPct, setDescuentoContado)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" />
+                          </div>
+                          <div className="space-y-1.5 w-full">
+                            <label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400">
+                               <input type="checkbox" checked={aplicarDescCreditoPct} onChange={e => setAplicarDescCreditoPct(e.target.checked)} className="accent-emerald-500" /> A Crédito (%) {proyecto !== "OTRO..." && maxDiscounts.credPct > 0 && <span className="text-emerald-500/80 ml-1">(Máx {maxDiscounts.credPct}%)</span>}
+                            </label>
+                            <input type="number" step="0.01" disabled={!aplicarDescCreditoPct} value={descuentoCredito} onChange={e => handleDiscountChange(e.target.value, maxDiscounts.credPct, setDescuentoCredito)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" />
+                          </div>
+                        </>}
+                        
+                        {maxDiscounts.showM2 && <>
+                           <div className="space-y-1.5 w-full">
+                             <label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400">
+                                <input type="checkbox" checked={aplicarDescContadoM2} onChange={e => setAplicarDescContadoM2(e.target.checked)} className="accent-emerald-500" /> Contado x m² ($us) {proyecto !== "OTRO..." && maxDiscounts.contM2 > 0 && <span className="text-emerald-500/80 ml-1">(Máx ${maxDiscounts.contM2})</span>}
+                             </label>
+                             <input type="number" step="0.01" disabled={!aplicarDescContadoM2} value={descuentoContadoM2} onChange={e => handleDiscountChange(e.target.value, maxDiscounts.contM2, setDescuentoContadoM2)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" />
+                           </div>
+                           <div className="space-y-1.5 w-full">
+                             <label className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-slate-400">
+                                <input type="checkbox" checked={aplicarDescM2} onChange={e => setAplicarDescM2(e.target.checked)} className="accent-emerald-500" /> Crédito x m² ($us) {proyecto !== "OTRO..." && maxDiscounts.credM2 > 0 && <span className="text-emerald-500/80 ml-1">(Máx ${maxDiscounts.credM2})</span>}
+                             </label>
+                             <input type="number" step="0.01" disabled={!aplicarDescM2} value={descuentoM2} onChange={e => handleDiscountChange(e.target.value, maxDiscounts.credM2, setDescuentoM2)} className="w-full glass-input rounded-xl p-2.5 sm:p-3 font-bold text-sm" />
+                           </div>
+                        </>}
                       </div>
                     </div>
 
