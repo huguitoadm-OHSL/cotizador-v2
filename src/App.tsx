@@ -29,7 +29,7 @@ const ESTRUCTURA_REGIONES = {
   "SANTA CRUZ": [
     "URUBÓ NORTE", "ROSA RODALI", "CELINA PAILÓN", "EL ENCANTO", "EL ENCANTO FASE 2", 
     "SANTA ROSA - FASE 1", "SANTA ROSA - FASE 2", "SANTA ROSA - FASE 3", 
-    "TAMARINDO", "JARDINES DEL BOSQUE", "EL PORVENIR", "EL PORVENIR FASE 2", "OTRO..."
+    "TAMARINDO", "JARDINES DEL BOSQUE", "EL PORVENIR", "EL PORVENIR FASE 2", "PARAÍSO DEL NORTE", "OTRO..."
   ],
   "MONTERO": [
     "MUYURINA", "LOS JARDINES", "EL RENACER", "CELINA 3", "CELINA 4", "CELINA 5", 
@@ -99,8 +99,23 @@ export default function App() {
                 return bestKey ? item[bestKey] : "";
             };
             
-            // Le quitamos el filtro que borraba "CELINA" para respetar tus nuevos nombres
             let cleanProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "").toUpperCase().trim();
+            
+            // --- TRADUCTOR AUTOMÁTICO EXCEL -> MENÚ APP ---
+            if (cleanProyecto === "CELINA III") cleanProyecto = "CELINA 3";
+            else if (cleanProyecto === "CELINA IV") cleanProyecto = "CELINA 4";
+            else if (cleanProyecto === "CELINA V") cleanProyecto = "CELINA 5";
+            else if (cleanProyecto === "CELINA VI") cleanProyecto = "CELINA 6";
+            else if (cleanProyecto === "CELINA VIII") cleanProyecto = "CELINA 8";
+            else if (cleanProyecto === "CELINA VII FASE 3") cleanProyecto = "CELINA 7 FASE 3";
+            else if (cleanProyecto === "CELINA MUYURINA") cleanProyecto = "MUYURINA";
+            else if (cleanProyecto === "CELINA SANTA FE") cleanProyecto = "SANTA FE";
+            else if (cleanProyecto === "CELINA - RANCHO NUEVO" || cleanProyecto === "CELINA RANCHO NUEVO") cleanProyecto = "RANCHO NUEVO";
+            else if (cleanProyecto === "CELINA CLARA CHUCHIO") cleanProyecto = "CLARA CHUCHIO";
+            else if (cleanProyecto === "CELINA URUBO DEL NORTE" || cleanProyecto === "CELINA URUBÓ DEL NORTE") cleanProyecto = "URUBÓ NORTE";
+            else if (cleanProyecto === "CELINA PAILON") cleanProyecto = "CELINA PAILÓN";
+            else if (cleanProyecto === "PARAISO DEL NORTE") cleanProyecto = "PARAÍSO DEL NORTE";
+            // ----------------------------------------------
             
             const cleanNumber = (val) => {
                 if (val === undefined || val === null || val === "") return "";
