@@ -24,10 +24,27 @@ const AnimatedNumber = ({ value }) => {
   return <>{new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(displayValue)}</>;
 };
 
+// --- ESTRUCTURA DE REGIONES Y PROYECTOS ---
+const ESTRUCTURA_REGIONES = {
+  "SANTA CRUZ": [
+    "URUBÓ NORTE", "ROSA RODALI", "CELINA PAILÓN", "EL ENCANTO", "EL ENCANTO FASE 2", 
+    "SANTA ROSA - FASE 1", "SANTA ROSA - FASE 2", "SANTA ROSA - FASE 3", 
+    "TAMARINDO", "JARDINES DEL BOSQUE", "EL PORVENIR", "EL PORVENIR FASE 2", "OTRO..."
+  ],
+  "MONTERO": [
+    "MUYURINA", "LOS JARDINES", "EL RENACER", "CELINA 3", "CELINA 4", "CELINA 5", 
+    "RANCHO NUEVO", "CELINA X", "CAÑAVERAL", "SANTA FE", "VILLA BELLA VIVIENDAS", "OTRO..."
+  ],
+  "SATÉLITE NORTE": [
+    "CELINA 7 FASE 3", "CELINA 8", "CLARA CHUCHIO", "SAN JORGE", 
+    "CELINA VII FASE 1", "CELINA VII FASE 2", "PRADERAS DEL NORTE", "OTRO..."
+  ]
+};
+
 export default function App() {
   // --- ESTADOS DE AUTENTICACIÓN Y PERFILES ---
-  const [userRole, setUserRole] = useState(null); // null, 'asesor', 'gerente'
-  const [currentView, setCurrentView] = useState("simulador"); // 'simulador', 'dashboard'
+  const [userRole, setUserRole] = useState(null); 
+  const [currentView, setCurrentView] = useState("simulador"); 
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState("");
 
@@ -81,8 +98,10 @@ export default function App() {
                 });
                 return bestKey ? item[bestKey] : "";
             };
-            let rawProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "");
-            let cleanProyecto = rawProyecto.toUpperCase().replace('CELINA ', '').replace('CELINA', '').trim();
+            
+            // Le quitamos el filtro que borraba "CELINA" para respetar tus nuevos nombres
+            let cleanProyecto = String(getValue(['proyecto', 'urbanizacion', 'celina']) || "").toUpperCase().trim();
+            
             const cleanNumber = (val) => {
                 if (val === undefined || val === null || val === "") return "";
                 if (typeof val === 'number') return val;
@@ -117,10 +136,10 @@ export default function App() {
     fetchLotes();
   }, []);
 
-  const proyectosDesdeDB = [...new Set(lotesDB.map(l => l.proyecto))].filter(Boolean).sort();
-  const proyectosOptions = proyectosDesdeDB.length > 0 ? proyectosDesdeDB : ["MUYURINA", "SANTA FE", "EL RENACER", "LOS JARDINES", "CAÑAVERAL", "RANCHO NUEVO"];
-
-  const [proyecto, setProyecto] = useState(proyectosOptions[0] || "MUYURINA");
+  const [regional, setRegional] = useState("MONTERO");
+  const proyectosOptions = ESTRUCTURA_REGIONES[regional];
+  const [proyecto, setProyecto] = useState(proyectosOptions[0]);
+  
   const [proyectoPersonalizado, setProyectoPersonalizado] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
   const [nombreAsesor, setNombreAsesor] = useState("");
@@ -130,6 +149,7 @@ export default function App() {
   const [categoriaLote, setCategoriaLote] = useState("");
   const [superficie, setSuperficie] = useState("");
   const [precio, setPrecio] = useState("");
+  
   const [descuentoCredito, setDescuentoCredito] = useState(20);
   const [descuentoContado, setDescuentoContado] = useState(30);
   const [descuentoM2, setDescuentoM2] = useState(0);
@@ -174,22 +194,35 @@ export default function App() {
     document.head.appendChild(link);
   }, []);
 
+  const handleRegionalChange = (e) => {
+    const nuevaRegional = e.target.value;
+    setRegional(nuevaRegional);
+    setProyecto(ESTRUCTURA_REGIONES[nuevaRegional][0]);
+    setProyectoPersonalizado("");
+  };
+
   useEffect(() => {
     setUv(""); setMzn(""); setLote(""); setSuperficie(""); setPrecio(""); setCategoriaLote("");
     setInicialPorcentaje(""); setInicialMonto(""); setAños("");
     setResultado(null); setProyectoPersonalizado(""); setEscenarioA(null); setShowTablaPagos(false); setIsSaved(false);
     setAplicarDescContadoPct(true); setAplicarDescCreditoPct(true); setAplicarDescM2(true); setAplicarDescContadoM2(true); setAplicarBonoInicialOtro(true);
 
-    if (proyecto === "MUYURINA") {
-      setDescuentoCredito(20); setDescuentoContado(30); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0);
-    } else if (["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE"].includes(proyecto)) {
+    const isM2_3 = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE"].includes(proyecto);
+    const isM2_4 = ["CAÑAVERAL"].includes(proyecto);
+    const isOtro = proyecto === "OTRO...";
+
+    if (isM2_3) {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(3);
-    } else if (proyecto === "CAÑAVERAL") {
+    } else if (isM2_4) {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(1); setDescuentoInicial(0); setDescuentoContadoM2(4);
-    } else if (proyecto === "OTRO") {
+    } else if (isOtro) {
       setDescuentoCredito(0); setDescuentoContado(0); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0); setModoManual(true);
+    } else {
+      // Proyectos estándar
+      setDescuentoCredito(20); setDescuentoContado(30); setDescuentoM2(0); setDescuentoInicial(0); setDescuentoContadoM2(0);
     }
-    if (proyecto !== "OTRO") setModoManual(lotesDB.length === 0);
+    
+    if (!isOtro) setModoManual(lotesDB.length === 0);
   }, [proyecto, lotesDB.length]);
 
   const uvsDisponibles = [...new Set(lotesDB.filter(l => l.proyecto === proyecto).map(l => l.uv))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
@@ -222,10 +255,14 @@ export default function App() {
     }
     
     if (pct > 0) {
-      if (proyecto === "MUYURINA") {
-        if (pct >= 4.99) setDescuentoCredito(23); else setDescuentoCredito(20);
-      } else if (["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO", "SANTA FE"].includes(proyecto)) {
+      const isM2 = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE", "CAÑAVERAL"].includes(proyecto);
+      const isOtro = proyecto === "OTRO...";
+
+      if (isM2) {
         if (pct >= 5) setDescuentoM2(2); else setDescuentoM2(1);
+      } else if (!isOtro) {
+        // Proyectos estándar (ej. MUYURINA, URUBÓ NORTE)
+        if (pct >= 4.99) setDescuentoCredito(23); else setDescuentoCredito(20);
       }
     }
   }, [modoInicial, inicialPorcentaje, inicialMonto, superficie, precio, proyecto, descuentoM2, descuentoCredito, aplicarDescM2, aplicarDescCreditoPct]);
@@ -258,14 +295,17 @@ export default function App() {
     }
 
     let descIniVal = 0;
-    if (proyecto === "OTRO" && aplicarBonoInicialOtro) descIniVal = Math.min(Number(descuentoInicial), 500);
+    if (proyecto === "OTRO..." && aplicarBonoInicialOtro) descIniVal = Math.min(Number(descuentoInicial), 500);
 
     const monto_descuento_total_credito = monto_descuento_m2 + monto_desc_credito_pct + descIniVal;
     const valor_credito = valor_original - monto_descuento_total_credito;
     
     let monto_desc_contado_m2 = sup * descContadoM2Val;
     let monto_descuento_total_contado = 0;
-    if (["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO"].includes(proyecto)) {
+    
+    const isM2 = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "CAÑAVERAL"].includes(proyecto);
+    
+    if (isM2) {
       monto_descuento_total_contado = monto_desc_contado_m2 + (valor_original * descContadoPct);
     } else {
       monto_descuento_total_contado = monto_descuento_m2 + (valor_post_desc_m2 * descContadoPct) + monto_desc_contado_m2;
@@ -323,7 +363,7 @@ export default function App() {
        });
     });
 
-    const nombreProyectoFinal = proyecto === "OTRO" ? proyectoPersonalizado : proyecto;
+    const nombreProyectoFinal = proyecto === "OTRO..." ? proyectoPersonalizado : proyecto;
     const fechaActual = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
     setResultado({
@@ -344,7 +384,8 @@ export default function App() {
       pagoAmortizacion: formatMoney(pago_puro), seguro: formatMoney(seguro), cbdi: formatMoney(cbdi),
       plazo: ans, meses: meses, pctInicial: parseFloat(pct_inicial_real.toFixed(2)),
       mensual: formatMoney(cuota_final), mensualBs: formatMoney(cuota_final * TIPO_CAMBIO), tablaPlazos: tablaPlazos,
-      proyeccionPlusvalia: proyeccionPlusvalia
+      proyeccionPlusvalia: proyeccionPlusvalia,
+      regional: regional // Agregamos la región al resultado para el CRM
     });
 
     setIsSaved(false);
@@ -359,6 +400,7 @@ export default function App() {
       cliente: resultado.cliente,
       asesor: resultado.asesor || "Asesor No Identificado",
       proyecto: resultado.proyecto,
+      regional: resultado.regional,
       ubicacion: `UV:${resultado.uv || '-'} MZN:${resultado.mzn || '-'} L:${resultado.lote || '-'}`,
       montoFinanciado: resultado.valorCreditoRaw
     };
@@ -380,7 +422,7 @@ export default function App() {
     if (!resultado) return "";
     const inicio = `Me enorgullece presentarle su propuesta oficial:\n\n`;
     const nombreProyectoCapitalizado = resultado.proyecto.charAt(0).toUpperCase() + resultado.proyecto.slice(1).toLowerCase();
-    const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}*\n🏷️ Categoría: ${resultado.categoria}\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
+    const ubicacion = `📍 *PROYECTO ${nombreProyectoCapitalizado || 'S/N'}* (${resultado.regional})\n🏷️ Categoría: ${resultado.categoria}\nUV ${resultado.uv || '-'} | MZN ${resultado.mzn || '-'} | Lote ${resultado.lote || '-'} (${resultado.superficie} m²)\n\n`;
     const precioLista = `💎 *Precio de Lista Original:* $ ${resultado.valorOriginal} (Bs. ${resultado.valorOriginalBs})\n\n`;
     
     let arrContado = [];
@@ -431,10 +473,11 @@ export default function App() {
     setTimeout(() => { window.print(); }, 300);
   };
 
-  const showDescPorcentaje = ["MUYURINA", "OTRO"].includes(proyecto);
-  const showDescM2 = ["EL RENACER", "LOS JARDINES", "CAÑAVERAL", "RANCHO NUEVO", "SANTA FE", "OTRO"].includes(proyecto);
-  const showBonoInicial = ["OTRO"].includes(proyecto);
-  const showDescContadoM2 = ["LOS JARDINES", "CAÑAVERAL", "EL RENACER", "RANCHO NUEVO", "SANTA FE"].includes(proyecto);
+  const isM2ProjectCheck = ["EL RENACER", "LOS JARDINES", "RANCHO NUEVO", "SANTA FE", "CAÑAVERAL"].includes(proyecto);
+  const isOtroCheck = proyecto === "OTRO...";
+  const showDescPorcentaje = !isM2ProjectCheck || isOtroCheck;
+  const showDescM2 = isM2ProjectCheck || isOtroCheck;
+  const showDescContadoM2 = isM2ProjectCheck || isOtroCheck;
 
   if (loading) return <div className="min-h-screen bg-[#0B1121] flex items-center justify-center"><RefreshCw className="w-12 h-12 text-cyan-500 animate-spin mx-auto mb-4" /></div>;
 
@@ -493,7 +536,7 @@ export default function App() {
       ) : (
       <div className="max-w-[1200px] w-full mx-auto py-6 sm:py-10 px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* BARRA DE NAVEGACIÓN GERENCIAL CON DISEÑO RESPONSIVE (ARREGLADO PARA MOBILE) */}
+        {/* BARRA DE NAVEGACIÓN GERENCIAL CON DISEÑO RESPONSIVE */}
         {userRole === "gerente" && (
           <div className="w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl mx-auto mb-6 sm:mb-8 print-hide">
             <nav className="bg-[#1E293B]/80 backdrop-blur-lg border border-cyan-900/50 rounded-2xl p-2 grid grid-cols-1 sm:grid-cols-2 gap-2 shadow-[0_0_20px_rgba(6,182,212,0.15)] w-full">
@@ -513,7 +556,7 @@ export default function App() {
              <div className="flex flex-col items-center mb-8 sm:mb-10 w-full px-2">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center mb-3 shadow-[0_0_30px_rgba(52,211,153,0.3)]"><Briefcase className="w-7 h-7 text-white" /></div>
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-white text-center leading-tight">Panel de Control <br className="sm:hidden" /><span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">CRM</span></h1>
-                <p className="text-slate-400 text-xs sm:text-sm font-medium tracking-wide mt-2 text-center">Gestión Regional Montero</p>
+                <p className="text-slate-400 text-xs sm:text-sm font-medium tracking-wide mt-2 text-center">Control y Gestión Nacional</p>
              </div>
 
              {/* KPIs (Indicadores Clave) */}
@@ -539,10 +582,11 @@ export default function App() {
                    <span className="bg-cyan-900/40 text-cyan-400 text-[10px] px-3 py-1 rounded-full font-bold uppercase border border-cyan-500/30 whitespace-nowrap">Datos en Tiempo Real</span>
                 </div>
                 <div className="w-full overflow-x-auto">
-                   <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
+                   <table className="w-full text-sm text-left text-slate-300 min-w-[800px]">
                       <thead className="text-xs text-slate-500 uppercase bg-[#0B1121]">
                          <tr>
                             <th className="px-6 py-4 font-bold">Fecha / Hora</th>
+                            <th className="px-6 py-4 font-bold">Regional</th>
                             <th className="px-6 py-4 font-bold">Cliente</th>
                             <th className="px-6 py-4 font-bold">Asesor</th>
                             <th className="px-6 py-4 font-bold">Proyecto</th>
@@ -552,11 +596,12 @@ export default function App() {
                       </thead>
                       <tbody>
                          {historialCRM.length === 0 ? (
-                           <tr><td colSpan="6" className="px-6 py-10 text-center text-slate-500">No hay cotizaciones registradas aún.</td></tr>
+                           <tr><td colSpan="7" className="px-6 py-10 text-center text-slate-500">No hay cotizaciones registradas aún.</td></tr>
                          ) : (
                            historialCRM.map((row) => (
                              <tr key={row.id} className="border-b border-slate-800/50 hover:bg-[#1E293B]/50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap">{row.fecha}</td>
+                                <td className="px-6 py-4 font-bold text-cyan-500 whitespace-nowrap">{row.regional || "MONTERO"}</td>
                                 <td className="px-6 py-4 font-bold text-white whitespace-nowrap">{row.cliente || "Sin nombre"}</td>
                                 <td className="px-6 py-4 whitespace-nowrap"><span className="bg-slate-800 px-2 py-1 rounded text-xs">{row.asesor}</span></td>
                                 <td className="px-6 py-4 text-cyan-400 font-bold whitespace-nowrap">{row.proyecto}</td>
@@ -597,22 +642,33 @@ export default function App() {
                       <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5"><BadgeCheck className="w-3.5 h-3.5 text-cyan-500" /> Nombre del Asesor</label><input type="text" value={nombreAsesor} onChange={e => setNombreAsesor(e.target.value)} placeholder="Tu Nombre Completo" className="w-full glass-input rounded-xl p-3 text-sm" /></div>
                     </div>
 
-                    <div className="space-y-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2"><Building2 className="w-4 h-4 text-cyan-500" /> Proyecto</label>
-                        {proyecto !== "OTRO" && lotesDB.length > 0 && (
-                          <button type="button" onClick={() => setModoManual(!modoManual)} className={`text-[9px] sm:text-[10px] font-bold px-3 py-1.5 rounded-full uppercase flex items-center gap-1.5 border whitespace-nowrap ${modoManual ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-cyan-900/30 text-cyan-400 border-cyan-500/50'}`}>
-                            {modoManual ? <><Edit3 className="w-3 h-3"/> Ingreso Manual</> : <><Database className="w-3 h-3"/> Búsqueda Inteligente</>}
-                          </button>
-                        )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                      {/* --- NUEVO CAMPO: REGIONAL --- */}
+                      <div className="space-y-2.5">
+                        <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-500" /> Regional</label>
+                        <select value={regional} onChange={handleRegionalChange} className="w-full glass-input rounded-2xl p-3 sm:p-4 font-bold text-white text-sm sm:text-base cursor-pointer border-cyan-700/50">
+                          {Object.keys(ESTRUCTURA_REGIONES).map(reg => <option key={reg} value={reg}>{reg}</option>)}
+                        </select>
                       </div>
-                      <select value={proyecto} onChange={e => setProyecto(e.target.value)} className="w-full glass-input rounded-2xl p-3 sm:p-4 font-bold text-white text-sm sm:text-base cursor-pointer">
-                        {proyectosOptions.map(p => <option key={p} value={p}>{p}</option>)} <option value="OTRO">OTRO...</option>
-                      </select>
-                      {proyecto === "OTRO" && <input type="text" value={proyectoPersonalizado} onChange={e => setProyectoPersonalizado(e.target.value)} placeholder="Nombre del proyecto..." className="w-full glass-input rounded-2xl p-4 text-sm font-bold text-white mt-2" required />}
+
+                      <div className="space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2"><Building2 className="w-4 h-4 text-cyan-500" /> Proyecto</label>
+                          {proyecto !== "OTRO..." && lotesDB.length > 0 && (
+                            <button type="button" onClick={() => setModoManual(!modoManual)} className={`text-[9px] sm:text-[10px] font-bold px-3 py-1.5 rounded-full uppercase flex items-center gap-1.5 border whitespace-nowrap ${modoManual ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-cyan-900/30 text-cyan-400 border-cyan-500/50'}`}>
+                              {modoManual ? <><Edit3 className="w-3 h-3"/> Ingreso Manual</> : <><Database className="w-3 h-3"/> Buscar en BD</>}
+                            </button>
+                          )}
+                        </div>
+                        <select value={proyecto} onChange={e => setProyecto(e.target.value)} className="w-full glass-input rounded-2xl p-3 sm:p-4 font-bold text-white text-sm sm:text-base cursor-pointer">
+                          {proyectosOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
                     </div>
 
-                    {!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? (
+                    {proyecto === "OTRO..." && <input type="text" value={proyectoPersonalizado} onChange={e => setProyectoPersonalizado(e.target.value)} placeholder="Nombre del proyecto manual..." className="w-full glass-input rounded-2xl p-4 text-sm font-bold text-white mt-2" required />}
+
+                    {!modoManual && proyecto !== "OTRO..." && lotesDB.length > 0 ? (
                       <div className="bg-cyan-900/10 p-3 sm:p-4 rounded-2xl border border-cyan-500/30 grid grid-cols-3 gap-2 sm:gap-3 w-full">
                         <div className="space-y-1.5 sm:space-y-2"><label className="text-[9px] font-bold text-cyan-400 uppercase text-center block">UV</label><select value={uv} onChange={handleUvChange} className="w-full bg-[#0F172A] border border-cyan-900/50 rounded-xl p-2 sm:p-2.5 text-center font-bold text-white text-xs sm:text-sm px-1"><option value="" disabled hidden>---</option>{uvsDisponibles.map(u => <option key={u} value={u}>{u}</option>)}</select></div>
                         <div className="space-y-1.5 sm:space-y-2"><label className="text-[9px] font-bold text-cyan-400 uppercase text-center block">MZN</label><select value={mzn} onChange={handleMznChange} disabled={!uv} className="w-full bg-[#0F172A] border border-cyan-900/50 rounded-xl p-2 sm:p-2.5 text-center font-bold text-white text-xs sm:text-sm px-1 disabled:opacity-50"><option value="" disabled hidden>---</option>{mznsDisponibles.map(m => <option key={m} value={m}>{m}</option>)}</select></div>
@@ -628,7 +684,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {lote && !modoManual && proyecto !== "OTRO" && (
+                    {lote && !modoManual && proyecto !== "OTRO..." && (
                       (() => {
                         const status = getLoteStatus(categoriaLote || "Estándar");
                         return (
@@ -647,8 +703,8 @@ export default function App() {
                     )}
 
                     <div className="grid grid-cols-2 gap-3 sm:gap-5 w-full">
-                      <div className="space-y-2.5"><label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5 truncate"><Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Superficie (m²)</label><input type="number" required value={superficie} onChange={e => setSuperficie(e.target.value)} readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-3 sm:p-4 font-extrabold text-white text-base sm:text-lg ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 cursor-default' : ''}`} /></div>
-                      <div className="space-y-2.5"><label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5 truncate"><DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Precio / m²</label><input type="number" required value={precio} onChange={e => setPrecio(e.target.value)} readOnly={!modoManual && proyecto !== "OTRO" && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-3 sm:p-4 font-extrabold text-white text-base sm:text-lg ${!modoManual && proyecto !== "OTRO" && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 cursor-default' : ''}`} /></div>
+                      <div className="space-y-2.5"><label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5 truncate"><Map className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Superficie (m²)</label><input type="number" required value={superficie} onChange={e => setSuperficie(e.target.value)} readOnly={!modoManual && proyecto !== "OTRO..." && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-3 sm:p-4 font-extrabold text-white text-base sm:text-lg ${!modoManual && proyecto !== "OTRO..." && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 cursor-default' : ''}`} /></div>
+                      <div className="space-y-2.5"><label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5 truncate"><DollarSign className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" /> Precio / m²</label><input type="number" required value={precio} onChange={e => setPrecio(e.target.value)} readOnly={!modoManual && proyecto !== "OTRO..." && lotesDB.length > 0} className={`w-full glass-input rounded-2xl p-3 sm:p-4 font-extrabold text-white text-base sm:text-lg ${!modoManual && proyecto !== "OTRO..." && lotesDB.length > 0 ? 'bg-emerald-900/10 border-emerald-500/30 text-emerald-300 cursor-default' : ''}`} /></div>
                     </div>
 
                     <div className="bg-[#1E293B]/40 border border-slate-700 p-4 sm:p-5 rounded-[2rem] w-full">
@@ -718,7 +774,7 @@ export default function App() {
                         <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
                           <div className="bg-[#0F172A] p-2.5 sm:p-3 rounded-xl border border-slate-700 print-hide shrink-0"><MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" /></div>
                           <div>
-                            <div className="text-[8px] sm:text-[9px] font-bold text-slate-500 uppercase">Proyecto</div>
+                            <div className="text-[8px] sm:text-[9px] font-bold text-slate-500 uppercase">Proyecto ({resultado.regional})</div>
                             <div className="text-white font-black text-base sm:text-lg md:text-xl uppercase leading-tight">{resultado.proyecto}</div>
                             
                             {/* Insignia VIP/Escasez en Resultados */}
@@ -823,7 +879,7 @@ export default function App() {
                       {/* ACCIONES Y BOTONES (SE OCULTAN AL IMPRIMIR) */}
                       <div className="flex flex-col gap-3 mt-6 sm:mt-8 print-hide w-full">
                         
-                        {/* NUEVO BOTÓN: GUARDAR EN CRM */}
+                        {/* BOTÓN: GUARDAR EN CRM */}
                         <button 
                           onClick={guardarEnCRM} 
                           disabled={isSaved}
@@ -894,12 +950,10 @@ export default function App() {
         {showComparativa && escenarioA && resultado && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm print-hide">
             <div className="bg-[#0F172A] border border-slate-700 w-full max-w-4xl rounded-[2rem] overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]">
-              {/* Cabecera del Modal */}
               <div className="p-4 sm:p-5 border-b border-slate-700 flex justify-between items-center bg-[#1E293B]/50">
                 <h3 className="text-lg sm:text-xl font-extrabold text-white flex items-center gap-2"><Scale className="w-5 h-5 text-cyan-400"/> Comparativa de Inversión</h3>
                 <button onClick={() => setShowComparativa(false)} className="p-2 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 rounded-xl transition-colors"><X className="w-5 h-5"/></button>
               </div>
-              {/* Cuerpo del Modal */}
               <div className="p-4 sm:p-6 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {/* Escenario A */}
